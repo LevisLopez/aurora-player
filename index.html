@@ -29,12 +29,20 @@
     <div id="track-artist" class="track-artist">Add songs to get started</div>
   </div>
 
-  <div class="artwork-wrap">
-    <div id="artwork-ring-outer" class="artwork-ring outer"></div>
-    <div id="artwork-ring-inner" class="artwork-ring inner"></div>
-    <div id="artwork-circle" class="artwork-circle">
-      <i class="ti ti-music" id="artwork-icon"></i>
-    </div>
+  <!-- Equalizer bars artwork -->
+  <div class="eq-artwork" id="eq-artwork" aria-hidden="true">
+    <div class="eq-bar" style="--d:0.9s"></div>
+    <div class="eq-bar" style="--d:0.7s"></div>
+    <div class="eq-bar" style="--d:1.1s"></div>
+    <div class="eq-bar" style="--d:0.6s"></div>
+    <div class="eq-bar" style="--d:0.8s"></div>
+    <div class="eq-bar" style="--d:0.5s"></div>
+    <div class="eq-bar" style="--d:1.0s"></div>
+    <div class="eq-bar" style="--d:0.75s"></div>
+    <div class="eq-bar" style="--d:0.65s"></div>
+    <div class="eq-bar" style="--d:0.55s"></div>
+    <div class="eq-bar" style="--d:0.85s"></div>
+    <div class="eq-bar" style="--d:0.95s"></div>
   </div>
 
   <div class="progress-section">
@@ -69,11 +77,19 @@
   </div>
 
   <div class="playlist-section">
-    <div class="playlist-header">
-      <span class="playlist-label">UP NEXT</span>
+    <div class="playlist-tabs">
+      <button id="tab-all" class="tab-btn active" aria-label="All songs">ALL</button>
+      <button id="tab-fav" class="tab-btn" aria-label="Favorites">
+        <i class="ti ti-heart"></i> FAVORITES
+      </button>
       <span id="playlist-count" class="playlist-count">0 songs</span>
     </div>
     <div id="playlist" class="playlist"></div>
+    <div id="empty-favorites" class="empty-favorites" hidden>
+      <i class="ti ti-heart-off"></i>
+      <p>No favorites yet</p>
+      <p class="empty-sub">Tap <i class="ti ti-heart"></i> on any song</p>
+    </div>
   </div>
 </div>
 
