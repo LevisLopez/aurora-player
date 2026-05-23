@@ -91,3 +91,12 @@ async function dbGetTotalSize() {
   const tracks = await dbGetAllTracks();
   return tracks.reduce((sum, t) => sum + (t.size || 0), 0);
 }
+
+// Toggle favorite status for a track
+async function dbToggleFavorite(id) {
+  const track = await dbGetTrack(id);
+  if (!track) return false;
+  const newVal = !track.favorite;
+  await dbUpdateTrack(id, { favorite: newVal });
+  return newVal;
+}
