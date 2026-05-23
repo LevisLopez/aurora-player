@@ -19,10 +19,24 @@
 <div id="screen-player" class="screen active">
   <header class="top-bar">
     <span class="app-name">AURORA</span>
-    <button id="btn-open-admin" class="icon-btn" aria-label="Manage library">
-      <i class="ti ti-settings"></i>
-    </button>
+    <div style="display:flex;align-items:center;gap:4px;">
+      <button id="btn-sleep" class="icon-btn" aria-label="Sleep timer">
+        <i class="ti ti-moon"></i>
+      </button>
+      <button id="btn-open-admin" class="icon-btn" aria-label="Manage library">
+        <i class="ti ti-settings"></i>
+      </button>
+    </div>
   </header>
+
+  <!-- Sleep timer active badge -->
+  <div id="sleep-badge" class="sleep-badge" hidden>
+    <i class="ti ti-moon" aria-hidden="true"></i>
+    <span id="sleep-countdown">--:--</span>
+    <button id="sleep-cancel" class="sleep-cancel-btn" aria-label="Cancel sleep timer">
+      <i class="ti ti-x"></i>
+    </button>
+  </div>
 
   <div class="track-info">
     <div id="track-title" class="track-title">No track loaded</div>
@@ -136,10 +150,35 @@
   </div>
 </div>
 
+
+<!-- Sleep Timer Modal -->
+<div id="modal-sleep" class="modal-overlay" hidden>
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-moon" style="color:#a99cf8;margin-right:8px;"></i>Sleep Timer</div>
+    <div class="sleep-options">
+      <button class="sleep-opt-btn" data-minutes="15">15 min</button>
+      <button class="sleep-opt-btn" data-minutes="30">30 min</button>
+      <button class="sleep-opt-btn" data-minutes="45">45 min</button>
+      <button class="sleep-opt-btn" data-minutes="60">1 hour</button>
+      <button class="sleep-opt-btn" data-minutes="90">1.5 hours</button>
+      <button class="sleep-opt-btn" data-minutes="120">2 hours</button>
+    </div>
+    <div class="sleep-custom">
+      <label class="modal-label">Custom (minutes)</label>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <input type="number" id="sleep-custom-input" class="modal-input" placeholder="e.g. 25" min="1" max="480" style="flex:1;" />
+        <button id="sleep-custom-set" class="modal-btn primary" style="flex:0 0 auto;padding:11px 18px;">Set</button>
+      </div>
+    </div>
+    <button id="modal-sleep-cancel" class="modal-btn secondary" style="margin-top:12px;width:100%;">Cancel</button>
+  </div>
+</div>
+
 <div id="toast" class="toast" aria-live="polite"></div>
 <audio id="audio" preload="auto"></audio>
 
 <script src="db.js"></script>
+<script src="sleep.js"></script>
 <script src="player.js"></script>
 <script src="app.js"></script>
 </body>
