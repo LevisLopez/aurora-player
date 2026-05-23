@@ -560,3 +560,91 @@ body:not(.playing) .playing-bars span { animation-play-state: paused; height: 7p
   transform: translateX(-50%) translateY(0);
   opacity: 1;
 }
+
+/* ══════════════════════════════════════
+   SLEEP TIMER
+══════════════════════════════════════ */
+
+/* Active badge under header */
+.sleep-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(123,108,246,0.12);
+  border: 0.5px solid rgba(123,108,246,0.3);
+  border-radius: 20px;
+  padding: 6px 14px;
+  margin: 0 24px 4px;
+  flex-shrink: 0;
+  animation: sleep-pulse 3s ease-in-out infinite;
+}
+.sleep-badge[hidden] { display: none; }
+.sleep-badge i { font-size: 14px; color: var(--accent2); }
+.sleep-badge span {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent2);
+  font-family: var(--font-head);
+  letter-spacing: 1px;
+}
+.sleep-cancel-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text3);
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 50%;
+  transition: color 0.2s;
+}
+.sleep-cancel-btn:hover { color: var(--text); }
+
+@keyframes sleep-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* Sleep timer modal options grid */
+.sleep-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.sleep-opt-btn {
+  background: var(--bg3);
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  color: var(--text2);
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: 12px 8px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.sleep-opt-btn:hover,
+.sleep-opt-btn.selected {
+  background: rgba(123,108,246,0.15);
+  border-color: var(--accent);
+  color: var(--accent2);
+}
+.sleep-opt-btn:active { transform: scale(0.96); }
+
+.sleep-custom { margin-bottom: 4px; }
+
+/* Moon icon active state */
+.icon-btn.sleep-on { color: var(--accent2); }
+
+/* Fade out overlay — shown during last 30s */
+.fade-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13,13,18,0);
+  pointer-events: none;
+  z-index: 50;
+  transition: background 30s linear;
+}
+.fade-overlay.fading { background: rgba(13,13,18,0.85); }
