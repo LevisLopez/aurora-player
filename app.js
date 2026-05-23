@@ -238,9 +238,15 @@ fileInput.addEventListener('change', async () => {
   const files = Array.from(fileInput.files);
   if (!files.length) return;
 
+  // Audio extensions accepted — covers files with wrong/empty MIME type (common on Android)
+  const AUDIO_EXTS = /\.(mp3|mp4|m4a|ogg|oga|opus|wav|flac|aac|weba|webm)$/i;
+
   let added = 0;
+  let skipped = 0;
   for (const file of files) {
-    if (!file.type.startsWith('audio/')) continue;
+    const validMime = file.type.startsWith('audio/') || file.type.startsWith('video/mp4');
+    const validExt  = AUDIO_EXTS.test(file.name);
+    if (!validMime && !validExt) { skipped++; continue; }
 
     // parse title/artist from filename  e.g. "Artist - Title.mp3"
     const nameNoExt = file.name.replace(/\.[^/.]+$/, '');
@@ -271,7 +277,12 @@ fileInput.addEventListener('change', async () => {
   if (added > 0) {
     await Player.refreshLibrary();
     renderAdminList();
-    showToast(`${added} song${added > 1 ? 's' : ''} added`);
+    const msg = skipped > 0
+      ? `${added} added, ${skipped} format not supported`
+      : `${added} song${added > 1 ? 's' : ''} added`;
+    showToast(msg);
+  } else if (skipped > 0) {
+    showToast('No supported audio files found');
   }
 });
 
