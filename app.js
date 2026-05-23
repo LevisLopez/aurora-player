@@ -399,3 +399,50 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   });
 }
+
+/* ── Sleep Timer UI ───────────────────── */
+const btnSleepOpen      = $('btn-sleep');
+const modalSleep        = $('modal-sleep');
+const modalSleepCancel  = $('modal-sleep-cancel');
+const sleepCustomInput  = $('sleep-custom-input');
+const sleepCustomSet    = $('sleep-custom-set');
+
+btnSleepOpen.addEventListener('click', () => {
+  if (SleepTimer.active) {
+    SleepTimer.cancel();
+    showToast('Sleep timer cancelled');
+    return;
+  }
+  modalSleep.hidden = false;
+});
+
+modalSleepCancel.addEventListener('click', () => {
+  modalSleep.hidden = true;
+});
+
+modalSleep.addEventListener('click', (e) => {
+  if (e.target === modalSleep) modalSleep.hidden = true;
+});
+
+// Quick option buttons
+document.querySelectorAll('.sleep-opt-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const minutes = parseInt(btn.dataset.minutes, 10);
+    SleepTimer.start(minutes);
+    modalSleep.hidden = true;
+    showToast(`Sleep timer set for ${btn.textContent}`);
+  });
+});
+
+// Custom minutes
+sleepCustomSet.addEventListener('click', () => {
+  const val = parseInt(sleepCustomInput.value, 10);
+  if (!val || val < 1 || val > 480) {
+    showToast('Enter a value between 1 and 480 minutes');
+    return;
+  }
+  SleepTimer.start(val);
+  modalSleep.hidden = true;
+  sleepCustomInput.value = '';
+  showToast(`Sleep timer set for ${val} min`);
+});
