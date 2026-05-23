@@ -1,448 +1,650 @@
 /* ═══════════════════════════════════════
-   app.js — UI controller
-   Handles: screen nav, player UI,
-   admin panel, file import, modals
+   AURORA PLAYER — Stylesheet v2
+   Equalizer bars artwork + Favorites tabs
 ═══════════════════════════════════════ */
 
-/* ── DOM refs ─────────────────────────── */
-const $ = id => document.getElementById(id);
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-// Player screen
-const screenPlayer   = $('screen-player');
-const screenAdmin    = $('screen-admin');
-const trackTitle     = $('track-title');
-const trackArtist    = $('track-artist');
-const progressFill   = $('progress-fill');
-const progressThumb  = $('progress-thumb');
-const progressWrap   = $('progress-wrap');
-const timeCurrent    = $('time-current');
-const timeTotal      = $('time-total');
-const playIcon       = $('play-icon');
-const btnPlay        = $('btn-play');
-const btnPrev        = $('btn-prev');
-const btnNext        = $('btn-next');
-const btnShuffle     = $('btn-shuffle');
-const btnRepeat      = $('btn-repeat');
-const btnOpenAdmin   = $('btn-open-admin');
-const playlistEl     = $('playlist');
-const playlistCount  = $('playlist-count');
-const tabAll         = $('tab-all');
-const tabFav         = $('tab-fav');
-const emptyFavorites = $('empty-favorites');
-
-// Admin screen
-const btnBack       = $('btn-back');
-const btnAddSong    = $('btn-add-song');
-const fileInput     = $('file-input');
-const adminList     = $('admin-list');
-const adminCount    = $('admin-count');
-const adminSize     = $('admin-size');
-const emptyState    = $('empty-state');
-
-// Modal
-const modalRename   = $('modal-rename');
-const renameTitle   = $('rename-title');
-const renameArtist  = $('rename-artist');
-const modalCancel   = $('modal-cancel');
-const modalSave     = $('modal-save');
-
-// Toast
-const toastEl       = $('toast');
-
-let renamingId = null;
-let toastTimer = null;
-
-/* ── Toast ───────────────────────────── */
-function showToast(msg) {
-  toastEl.textContent = msg;
-  toastEl.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2500);
+:root {
+  --bg:      #0d0d12;
+  --bg2:     #13131a;
+  --bg3:     #1a1a24;
+  --accent:  #7b6cf6;
+  --accent2: #a99cf8;
+  --text:    #f0eeff;
+  --text2:   #8888aa;
+  --text3:   #555577;
+  --border:  #2a2840;
+  --fav:     #f472b6;
+  --font-head: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
 }
 
-/* ── Screen navigation ───────────────── */
-function showScreen(name) {
-  screenPlayer.classList.toggle('active', name === 'player');
-  screenAdmin.classList.toggle('active', name === 'admin');
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-btnOpenAdmin.addEventListener('click', () => {
-  renderAdminList();
-  showScreen('admin');
-});
-
-btnBack.addEventListener('click', () => {
-  showScreen('player');
-});
-
-/* ── Player callbacks ─────────────────── */
-Player.onTrackChange = (track) => {
-  if (!track) {
-    trackTitle.textContent  = 'No track loaded';
-    trackArtist.textContent = 'Add songs to get started';
-    return;
-  }
-  trackTitle.textContent  = track.title  || 'Unknown';
-  trackArtist.textContent = track.artist || 'Unknown';
-  renderPlaylist();
-};
-
-Player.onPlayState = (playing) => {
-  playIcon.className = playing
-    ? 'ti ti-player-pause'
-    : 'ti ti-player-play';
-};
-
-Player.onProgress = (ratio, current, total) => {
-  const pct = (ratio * 100).toFixed(2) + '%';
-  progressFill.style.width = pct;
-  progressThumb.style.left = pct;
-  timeCurrent.textContent  = Player.formatTime(current);
-  timeTotal.textContent    = Player.formatTime(total);
-  progressWrap.setAttribute('aria-valuenow', Math.round(ratio * 100));
-};
-
-Player.onQueueChange = () => {
-  renderPlaylist();
-};
-
-/* ── Transport buttons ────────────────── */
-btnPlay.addEventListener('click', () => Player.togglePlay());
-btnPrev.addEventListener('click', () => Player.prev());
-btnNext.addEventListener('click', () => Player.next(true));
-
-btnShuffle.addEventListener('click', () => {
-  const on = Player.toggleShuffle();
-  btnShuffle.classList.toggle('on', on);
-  showToast(on ? 'Shuffle on' : 'Shuffle off');
-});
-
-btnRepeat.addEventListener('click', () => {
-  const mode = Player.cycleRepeat();
-  btnRepeat.classList.remove('on');
-  const icon = btnRepeat.querySelector('i');
-  if (mode === 'none') {
-    icon.className = 'ti ti-repeat';
-  } else if (mode === 'all') {
-    btnRepeat.classList.add('on');
-    icon.className = 'ti ti-repeat';
-    showToast('Repeat all');
-  } else {
-    btnRepeat.classList.add('on');
-    icon.className = 'ti ti-repeat-once';
-    showToast('Repeat one');
-  }
-});
-
-/* ── Tabs: ALL | FAVORITES ────────────── */
-tabAll.addEventListener('click', () => {
-  tabAll.classList.add('active');
-  tabFav.classList.remove('active');
-  Player.setFavoritesOnly(false);
-});
-
-tabFav.addEventListener('click', () => {
-  tabFav.classList.add('active');
-  tabAll.classList.remove('active');
-  Player.setFavoritesOnly(true);
-});
-function seekFromEvent(e) {
-  const rect  = progressWrap.getBoundingClientRect();
-  const x     = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-  const ratio = Math.min(Math.max(x / rect.width, 0), 1);
-  Player.seek(ratio);
+/* ── SCREENS ── */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  background: var(--bg);
 }
-progressWrap.addEventListener('click',      seekFromEvent);
-progressWrap.addEventListener('touchstart', seekFromEvent, { passive: true });
+.screen.active { transform: translateX(0); }
 
-/* ── Playlist render ──────────────────── */
-function renderPlaylist() {
-  const tracks  = Player.tracks;
-  const queue   = Player.queue;
-  const current = Player.currentTrack();
-  const favOnly = Player.favoritesOnly;
+/* ── TOP BAR ── */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 52px 24px 10px;
+  flex-shrink: 0;
+}
+.app-name {
+  font-family: var(--font-head);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--accent2);
+}
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 22px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: color 0.2s, background 0.2s;
+}
+.icon-btn:active { background: var(--bg3); }
+.icon-btn.add-btn { color: var(--accent); }
 
-  // Which tracks to show in the list (visual, not playback queue)
-  const displayTracks = favOnly
-    ? tracks.filter(t => t.favorite)
-    : tracks;
-
-  playlistCount.textContent = `${displayTracks.length} song${displayTracks.length !== 1 ? 's' : ''}`;
-
-  // Show empty favorites message if needed
-  const noFavs = favOnly && displayTracks.length === 0;
-  emptyFavorites.hidden = !noFavs;
-  playlistEl.style.display = noFavs ? 'none' : '';
-
-  if (!displayTracks.length) {
-    playlistEl.innerHTML = '';
-    return;
-  }
-
-  // Build display: show position number from queue if in queue, else just index
-  playlistEl.innerHTML = displayTracks.map((t, displayIdx) => {
-    const isActive  = t.id === current?.id;
-    const isFav     = !!t.favorite;
-
-    const numLabel = isActive
-      ? `<div class="playing-bars" aria-label="Playing"><span></span><span></span><span></span></div>`
-      : `<span class="pl-num">${displayIdx + 1}</span>`;
-
-    return `
-      <div class="playlist-item ${isActive ? 'active' : ''}" data-track-id="${t.id}" role="button" tabindex="0">
-        ${numLabel}
-        <div class="pl-info">
-          <div class="pl-title">${escHtml(t.title || 'Unknown')}</div>
-          <div class="pl-artist">${escHtml(t.artist || 'Unknown')}</div>
-        </div>
-        <button class="fav-btn ${isFav ? 'on' : ''}" data-id="${t.id}" aria-label="${isFav ? 'Remove from favorites' : 'Add to favorites'}">
-          <i class="ti ti-heart${isFav ? '-filled' : ''}"></i>
-        </button>
-        <span class="pl-dur">${t.duration ? Player.formatTime(t.duration) : '—'}</span>
-      </div>`;
-  }).join('');
-
-  // Click row → play
-  playlistEl.querySelectorAll('.playlist-item').forEach(el => {
-    el.addEventListener('click', (e) => {
-      if (e.target.closest('.fav-btn')) return; // don't trigger play on heart tap
-      const id = parseInt(el.dataset.trackId, 10);
-      Player.playById(id);
-    });
-  });
-
-  // Heart button → toggle favorite
-  playlistEl.querySelectorAll('.fav-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const id  = parseInt(btn.dataset.id, 10);
-      const val = await dbToggleFavorite(id);
-      await Player.refreshLibrary();
-      renderPlaylist();
-      showToast(val ? '♥ Added to Favorites' : 'Removed from Favorites');
-    });
-  });
-
-  // Scroll active into view
-  const activeEl = playlistEl.querySelector('.playlist-item.active');
-  if (activeEl) activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+/* ── TRACK INFO ── */
+.track-info {
+  text-align: center;
+  padding: 6px 32px 0;
+  flex-shrink: 0;
+}
+.track-title {
+  font-family: var(--font-head);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.track-artist {
+  font-size: 13px;
+  color: var(--text2);
+  margin-top: 3px;
 }
 
-/* ── Admin list render ────────────────── */
-async function renderAdminList() {
-  const tracks = Player.tracks;
-
-  // update stats
-  const totalSize = await dbGetTotalSize();
-  adminCount.textContent = `${tracks.length} song${tracks.length !== 1 ? 's' : ''}`;
-  adminSize.textContent  = `${(totalSize / 1024 / 1024).toFixed(1)} MB used`;
-
-  emptyState.classList.toggle('visible', tracks.length === 0);
-
-  if (!tracks.length) { adminList.innerHTML = ''; return; }
-
-  adminList.innerHTML = tracks.map(t => `
-    <div class="admin-item" data-id="${t.id}">
-      <div class="admin-thumb"><i class="ti ti-music"></i></div>
-      <div class="admin-info-col">
-        <div class="admin-title">${escHtml(t.title || 'Unknown')}</div>
-        <div class="admin-artist">${escHtml(t.artist || 'Unknown')}</div>
-      </div>
-      <div class="admin-actions">
-        <button class="admin-btn edit-btn" aria-label="Edit" data-id="${t.id}">
-          <i class="ti ti-pencil"></i>
-        </button>
-        <button class="admin-btn delete delete-btn" aria-label="Delete" data-id="${t.id}">
-          <i class="ti ti-trash"></i>
-        </button>
-      </div>
-    </div>
-  `).join('');
-
-  adminList.querySelectorAll('.edit-btn').forEach(btn => {
-    btn.addEventListener('click', () => openRenameModal(parseInt(btn.dataset.id, 10)));
-  });
-
-  adminList.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => deleteSong(parseInt(btn.dataset.id, 10)));
-  });
+/* ── EQUALIZER BARS ARTWORK ── */
+.eq-artwork {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 5px;
+  height: 90px;
+  padding: 0 20px;
+  margin: 16px 0 14px;
+  flex-shrink: 0;
 }
 
-/* ── File import ──────────────────────── */
-btnAddSong.addEventListener('click', () => fileInput.click());
-
-fileInput.addEventListener('change', async () => {
-  const files = Array.from(fileInput.files);
-  if (!files.length) return;
-
-  // Audio extensions accepted — covers files with wrong/empty MIME type (common on Android)
-  const AUDIO_EXTS = /\.(mp3|mp4|m4a|ogg|oga|opus|wav|flac|aac|weba|webm)$/i;
-
-  let added = 0;
-  let skipped = 0;
-  for (const file of files) {
-    const validMime = file.type.startsWith('audio/') || file.type.startsWith('video/mp4');
-    const validExt  = AUDIO_EXTS.test(file.name);
-    if (!validMime && !validExt) { skipped++; continue; }
-
-    // parse title/artist from filename  e.g. "Artist - Title.mp3"
-    const nameNoExt = file.name.replace(/\.[^/.]+$/, '');
-    let title  = nameNoExt;
-    let artist = 'Unknown';
-
-    const dashIdx = nameNoExt.indexOf(' - ');
-    if (dashIdx !== -1) {
-      artist = nameNoExt.slice(0, dashIdx).trim();
-      title  = nameNoExt.slice(dashIdx + 3).trim();
-    }
-
-    // get duration
-    const duration = await getAudioDuration(file);
-
-    await dbSaveTrack({
-      title,
-      artist,
-      blob:     file,
-      duration,
-      size:     file.size,
-    });
-    added++;
-  }
-
-  fileInput.value = '';
-
-  if (added > 0) {
-    await Player.refreshLibrary();
-    renderAdminList();
-    const msg = skipped > 0
-      ? `${added} added, ${skipped} format not supported`
-      : `${added} song${added > 1 ? 's' : ''} added`;
-    showToast(msg);
-  } else if (skipped > 0) {
-    showToast('No supported audio files found');
-  }
-});
-
-function getAudioDuration(file) {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file);
-    const a   = new Audio();
-    a.src     = url;
-    a.addEventListener('loadedmetadata', () => {
-      URL.revokeObjectURL(url);
-      resolve(isFinite(a.duration) ? a.duration : 0);
-    });
-    a.addEventListener('error', () => { URL.revokeObjectURL(url); resolve(0); });
-  });
+.eq-bar {
+  flex: 1;
+  max-width: 14px;
+  background: var(--accent);
+  border-radius: 3px 3px 2px 2px;
+  height: 20%;
+  animation: eq-bounce var(--d, 0.8s) ease-in-out infinite alternate;
+  animation-play-state: paused;
+  transition: background 0.3s;
 }
 
-/* ── Delete song ──────────────────────── */
-async function deleteSong(id) {
-  if (!confirm('Remove this song from your library?')) return;
-  await dbDeleteTrack(id);
-  await Player.refreshLibrary();
-  renderAdminList();
-  showToast('Song removed');
+.eq-bar:nth-child(odd)  { background: var(--accent); }
+.eq-bar:nth-child(even) { background: var(--accent2); }
+
+body.playing .eq-bar {
+  animation-play-state: running;
 }
 
-/* ── Rename modal ─────────────────────── */
-function openRenameModal(id) {
-  const track = Player.tracks.find(t => t.id === id);
-  if (!track) return;
-  renamingId             = id;
-  renameTitle.value      = track.title  || '';
-  renameArtist.value     = track.artist || '';
-  modalRename.hidden     = false;
-  renameTitle.focus();
+@keyframes eq-bounce {
+  0%   { height: 8%;  }
+  25%  { height: 60%; }
+  50%  { height: 30%; }
+  75%  { height: 85%; }
+  100% { height: 100%; }
 }
 
-modalCancel.addEventListener('click', () => {
-  modalRename.hidden = true;
-  renamingId = null;
-});
+/* stagger the animation offset per bar index */
+.eq-bar:nth-child(1)  { animation-delay: 0.00s; }
+.eq-bar:nth-child(2)  { animation-delay: 0.12s; }
+.eq-bar:nth-child(3)  { animation-delay: 0.24s; }
+.eq-bar:nth-child(4)  { animation-delay: 0.06s; }
+.eq-bar:nth-child(5)  { animation-delay: 0.18s; }
+.eq-bar:nth-child(6)  { animation-delay: 0.30s; }
+.eq-bar:nth-child(7)  { animation-delay: 0.09s; }
+.eq-bar:nth-child(8)  { animation-delay: 0.21s; }
+.eq-bar:nth-child(9)  { animation-delay: 0.33s; }
+.eq-bar:nth-child(10) { animation-delay: 0.15s; }
+.eq-bar:nth-child(11) { animation-delay: 0.27s; }
+.eq-bar:nth-child(12) { animation-delay: 0.03s; }
 
-modalSave.addEventListener('click', async () => {
-  if (!renamingId) return;
-  const newTitle  = renameTitle.value.trim()  || 'Unknown';
-  const newArtist = renameArtist.value.trim() || 'Unknown';
-  await dbUpdateTrack(renamingId, { title: newTitle, artist: newArtist });
-  await Player.refreshLibrary();
-  renderAdminList();
-  modalRename.hidden = true;
-  renamingId = null;
-  showToast('Track updated');
-});
-
-modalRename.addEventListener('click', (e) => {
-  if (e.target === modalRename) { modalRename.hidden = true; renamingId = null; }
-});
-
-/* ── Util ─────────────────────────────── */
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+/* ── PROGRESS ── */
+.progress-section {
+  padding: 0 24px;
+  flex-shrink: 0;
+}
+.progress-bar-wrap {
+  cursor: pointer;
+  padding: 8px 0;
+}
+.progress-track {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  position: relative;
+}
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s linear;
+}
+.progress-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+  top: -4.5px;
+  left: 0%;
+  transform: translateX(-50%);
+  box-shadow: 0 0 0 2px var(--accent);
+  transition: left 0.3s linear;
+}
+.progress-times {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 4px;
 }
 
-/* ── Init ─────────────────────────────── */
-(async () => {
-  Player.setupMediaSession();
-  await Player.loadLibrary();
-  renderPlaylist();
-})();
+/* ── CONTROLS ── */
+.controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px 0 8px;
+  flex-shrink: 0;
+}
+.ctrl-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 22px;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, transform 0.1s;
+}
+.ctrl-btn:active { transform: scale(0.9); }
+.ctrl-btn.on { color: var(--accent); }
+.play-btn {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 26px;
+  box-shadow: 0 4px 20px rgba(123,108,246,0.4);
+  transition: transform 0.15s;
+}
+.play-btn:active { transform: scale(0.93); }
 
-/* ── Service Worker ───────────────────── */
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  });
+/* ── PLAYLIST SECTION ── */
+.playlist-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px 8px;
 }
 
-/* ── Sleep Timer UI ───────────────────── */
-const btnSleepOpen      = $('btn-sleep');
-const modalSleep        = $('modal-sleep');
-const modalSleepCancel  = $('modal-sleep-cancel');
-const sleepCustomInput  = $('sleep-custom-input');
-const sleepCustomSet    = $('sleep-custom-set');
+/* ── TABS ── */
+.playlist-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px 10px;
+  flex-shrink: 0;
+  border-bottom: 0.5px solid var(--border);
+  margin-bottom: 6px;
+}
+.tab-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-head);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--text3);
+  padding: 5px 12px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: color 0.2s, background 0.2s;
+}
+.tab-btn.active {
+  color: var(--accent);
+  background: rgba(123,108,246,0.12);
+}
+.tab-btn i { font-size: 13px; }
+.tab-btn.active i { color: var(--fav); }
 
-btnSleepOpen.addEventListener('click', () => {
-  if (SleepTimer.active) {
-    SleepTimer.cancel();
-    showToast('Sleep timer cancelled');
-    return;
-  }
-  modalSleep.hidden = false;
-});
+.playlist-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text3);
+}
 
-modalSleepCancel.addEventListener('click', () => {
-  modalSleep.hidden = true;
-});
+/* ── PLAYLIST ── */
+.playlist {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 12px;
+}
+.playlist::-webkit-scrollbar { width: 2px; }
+.playlist::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-modalSleep.addEventListener('click', (e) => {
-  if (e.target === modalSleep) modalSleep.hidden = true;
-});
+.playlist-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.playlist-item:active { background: var(--bg3); }
+.playlist-item.active { background: var(--bg3); }
 
-// Quick option buttons
-document.querySelectorAll('.sleep-opt-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const minutes = parseInt(btn.dataset.minutes, 10);
-    SleepTimer.start(minutes);
-    modalSleep.hidden = true;
-    showToast(`Sleep timer set for ${btn.textContent}`);
-  });
-});
+.pl-num {
+  font-size: 12px;
+  color: var(--text3);
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.pl-info { flex: 1; min-width: 0; }
+.pl-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pl-artist { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.pl-dur { font-size: 11px; color: var(--text3); flex-shrink: 0; }
 
-// Custom minutes
-sleepCustomSet.addEventListener('click', () => {
-  const val = parseInt(sleepCustomInput.value, 10);
-  if (!val || val < 1 || val > 480) {
-    showToast('Enter a value between 1 and 480 minutes');
-    return;
-  }
-  SleepTimer.start(val);
-  modalSleep.hidden = true;
-  sleepCustomInput.value = '';
-  showToast(`Sleep timer set for ${val} min`);
-});
+/* ── FAVORITE BUTTON ── */
+.fav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text3);
+  font-size: 18px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.2s, transform 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.fav-btn:active { transform: scale(1.3); }
+.fav-btn.on { color: var(--fav); }
+
+/* ── PLAYING BARS (mini in playlist) ── */
+.playing-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.playing-bars span {
+  width: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  animation: bar-mini 0.7s ease-in-out infinite alternate;
+}
+.playing-bars span:nth-child(2) { animation-delay: 0.2s; }
+.playing-bars span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bar-mini { from { height: 3px; } to { height: 14px; } }
+body:not(.playing) .playing-bars span { animation-play-state: paused; height: 7px; }
+
+/* ── EMPTY FAVORITES ── */
+.empty-favorites {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text3);
+  font-size: 14px;
+  padding-bottom: 40px;
+}
+.empty-favorites[hidden] { display: none; }
+.empty-favorites i { font-size: 40px; opacity: 0.3; }
+.empty-favorites .empty-sub { font-size: 13px; }
+.empty-favorites .empty-sub i { font-size: 13px; vertical-align: -1px; }
+
+/* ══════════════════════════════════════
+   ADMIN SCREEN
+══════════════════════════════════════ */
+.admin-info {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 24px 12px;
+  font-size: 12px;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+.admin-list {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.admin-list::-webkit-scrollbar { width: 2px; }
+.admin-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.admin-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  background: var(--bg2);
+  border: 0.5px solid var(--border);
+  flex-shrink: 0;
+}
+.admin-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--bg3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent);
+  font-size: 20px;
+}
+.admin-info-col { flex: 1; min-width: 0; }
+.admin-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.admin-artist { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.admin-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.admin-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text3);
+  font-size: 19px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, background 0.2s;
+}
+.admin-btn:hover { color: var(--text); background: var(--bg3); }
+.admin-btn.delete:hover { color: #ef4444; }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex: 1;
+  color: var(--text3);
+  font-size: 14px;
+  padding-bottom: 60px;
+}
+.empty-state.visible { display: flex; }
+.empty-state i { font-size: 48px; margin-bottom: 8px; opacity: 0.4; }
+.empty-sub { font-size: 13px; color: var(--text3); }
+.empty-sub strong { color: var(--accent); }
+
+/* ══════════════════════════════════════
+   MODAL
+══════════════════════════════════════ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay[hidden] { display: none; }
+.modal-box {
+  background: var(--bg2);
+  border: 0.5px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  width: 100%;
+  max-width: 320px;
+}
+.modal-title {
+  font-family: var(--font-head);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 18px;
+}
+.modal-label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  margin-top: 14px;
+}
+.modal-label:first-of-type { margin-top: 0; }
+.modal-input {
+  width: 100%;
+  background: var(--bg3);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 14px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.modal-input:focus { border-color: var(--accent); }
+.modal-actions { display: flex; gap: 10px; margin-top: 22px; }
+.modal-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  transition: opacity 0.2s, transform 0.1s;
+}
+.modal-btn:active { transform: scale(0.97); }
+.modal-btn.primary { background: var(--accent); color: #fff; }
+.modal-btn.secondary { background: var(--bg3); color: var(--text2); }
+
+/* ══════════════════════════════════════
+   TOAST
+══════════════════════════════════════ */
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--bg3);
+  border: 0.5px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  padding: 10px 20px;
+  border-radius: 30px;
+  z-index: 200;
+  opacity: 0;
+  transition: transform 0.3s, opacity 0.3s;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* ══════════════════════════════════════
+   SLEEP TIMER
+══════════════════════════════════════ */
+
+/* Active badge under header */
+.sleep-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(123,108,246,0.12);
+  border: 0.5px solid rgba(123,108,246,0.3);
+  border-radius: 20px;
+  padding: 6px 14px;
+  margin: 0 24px 4px;
+  flex-shrink: 0;
+  animation: sleep-pulse 3s ease-in-out infinite;
+}
+.sleep-badge[hidden] { display: none; }
+.sleep-badge i { font-size: 14px; color: var(--accent2); }
+.sleep-badge span {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent2);
+  font-family: var(--font-head);
+  letter-spacing: 1px;
+}
+.sleep-cancel-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text3);
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 50%;
+  transition: color 0.2s;
+}
+.sleep-cancel-btn:hover { color: var(--text); }
+
+@keyframes sleep-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* Sleep timer modal options grid */
+.sleep-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.sleep-opt-btn {
+  background: var(--bg3);
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  color: var(--text2);
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: 12px 8px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.sleep-opt-btn:hover,
+.sleep-opt-btn.selected {
+  background: rgba(123,108,246,0.15);
+  border-color: var(--accent);
+  color: var(--accent2);
+}
+.sleep-opt-btn:active { transform: scale(0.96); }
+
+.sleep-custom { margin-bottom: 4px; }
+
+/* Moon icon active state */
+.icon-btn.sleep-on { color: var(--accent2); }
+
+/* Fade out overlay — shown during last 30s */
+.fade-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13,13,18,0);
+  pointer-events: none;
+  z-index: 50;
+  transition: background 30s linear;
+}
+.fade-overlay.fading { background: rgba(13,13,18,0.85); }
