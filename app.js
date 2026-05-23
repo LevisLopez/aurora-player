@@ -8,25 +8,27 @@
 const $ = id => document.getElementById(id);
 
 // Player screen
-const screenPlayer  = $('screen-player');
-const screenAdmin   = $('screen-admin');
-const trackTitle    = $('track-title');
-const trackArtist   = $('track-artist');
-const artworkCircle = document.querySelector('.artwork-circle');
-const progressFill  = $('progress-fill');
-const progressThumb = $('progress-thumb');
-const progressWrap  = $('progress-wrap');
-const timeCurrent   = $('time-current');
-const timeTotal     = $('time-total');
-const playIcon      = $('play-icon');
-const btnPlay       = $('btn-play');
-const btnPrev       = $('btn-prev');
-const btnNext       = $('btn-next');
-const btnShuffle    = $('btn-shuffle');
-const btnRepeat     = $('btn-repeat');
-const btnOpenAdmin  = $('btn-open-admin');
-const playlistEl    = $('playlist');
-const playlistCount = $('playlist-count');
+const screenPlayer   = $('screen-player');
+const screenAdmin    = $('screen-admin');
+const trackTitle     = $('track-title');
+const trackArtist    = $('track-artist');
+const progressFill   = $('progress-fill');
+const progressThumb  = $('progress-thumb');
+const progressWrap   = $('progress-wrap');
+const timeCurrent    = $('time-current');
+const timeTotal      = $('time-total');
+const playIcon       = $('play-icon');
+const btnPlay        = $('btn-play');
+const btnPrev        = $('btn-prev');
+const btnNext        = $('btn-next');
+const btnShuffle     = $('btn-shuffle');
+const btnRepeat      = $('btn-repeat');
+const btnOpenAdmin   = $('btn-open-admin');
+const playlistEl     = $('playlist');
+const playlistCount  = $('playlist-count');
+const tabAll         = $('tab-all');
+const tabFav         = $('tab-fav');
+const emptyFavorites = $('empty-favorites');
 
 // Admin screen
 const btnBack       = $('btn-back');
@@ -78,12 +80,10 @@ Player.onTrackChange = (track) => {
   if (!track) {
     trackTitle.textContent  = 'No track loaded';
     trackArtist.textContent = 'Add songs to get started';
-    artworkCircle.classList.remove('playing');
     return;
   }
   trackTitle.textContent  = track.title  || 'Unknown';
   trackArtist.textContent = track.artist || 'Unknown';
-  artworkCircle.classList.add('playing');
   renderPlaylist();
 };
 
@@ -91,7 +91,6 @@ Player.onPlayState = (playing) => {
   playIcon.className = playing
     ? 'ti ti-player-pause'
     : 'ti ti-player-play';
-  artworkCircle.classList.toggle('playing', playing);
 };
 
 Player.onProgress = (ratio, current, total) => {
@@ -135,7 +134,18 @@ btnRepeat.addEventListener('click', () => {
   }
 });
 
-/* ── Progress seek ────────────────────── */
+/* ── Tabs: ALL | FAVORITES ────────────── */
+tabAll.addEventListener('click', () => {
+  tabAll.classList.add('active');
+  tabFav.classList.remove('active');
+  Player.setFavoritesOnly(false);
+});
+
+tabFav.addEventListener('click', () => {
+  tabFav.classList.add('active');
+  tabAll.classList.remove('active');
+  Player.setFavoritesOnly(true);
+});
 function seekFromEvent(e) {
   const rect  = progressWrap.getBoundingClientRect();
   const x     = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
@@ -150,43 +160,70 @@ function renderPlaylist() {
   const tracks  = Player.tracks;
   const queue   = Player.queue;
   const current = Player.currentTrack();
+  const favOnly = Player.favoritesOnly;
 
-  playlistCount.textContent = `${tracks.length} song${tracks.length !== 1 ? 's' : ''}`;
+  // Which tracks to show in the list (visual, not playback queue)
+  const displayTracks = favOnly
+    ? tracks.filter(t => t.favorite)
+    : tracks;
 
-  if (!tracks.length) {
+  playlistCount.textContent = `${displayTracks.length} song${displayTracks.length !== 1 ? 's' : ''}`;
+
+  // Show empty favorites message if needed
+  const noFavs = favOnly && displayTracks.length === 0;
+  emptyFavorites.hidden = !noFavs;
+  playlistEl.style.display = noFavs ? 'none' : '';
+
+  if (!displayTracks.length) {
     playlistEl.innerHTML = '';
     return;
   }
 
-  playlistEl.innerHTML = queue.map((trackIdx, pos) => {
-    const t         = tracks[trackIdx];
-    const isActive  = t?.id === current?.id;
-    const numLabel  = isActive
+  // Build display: show position number from queue if in queue, else just index
+  playlistEl.innerHTML = displayTracks.map((t, displayIdx) => {
+    const isActive  = t.id === current?.id;
+    const isFav     = !!t.favorite;
+
+    const numLabel = isActive
       ? `<div class="playing-bars" aria-label="Playing"><span></span><span></span><span></span></div>`
-      : `<span class="pl-num ${isActive ? 'playing-num' : ''}">${pos + 1}</span>`;
+      : `<span class="pl-num">${displayIdx + 1}</span>`;
 
     return `
-      <div class="playlist-item ${isActive ? 'active' : ''}"
-           data-track-id="${t.id}"
-           role="button" tabindex="0">
+      <div class="playlist-item ${isActive ? 'active' : ''}" data-track-id="${t.id}" role="button" tabindex="0">
         ${numLabel}
         <div class="pl-info">
           <div class="pl-title">${escHtml(t.title || 'Unknown')}</div>
           <div class="pl-artist">${escHtml(t.artist || 'Unknown')}</div>
         </div>
+        <button class="fav-btn ${isFav ? 'on' : ''}" data-id="${t.id}" aria-label="${isFav ? 'Remove from favorites' : 'Add to favorites'}">
+          <i class="ti ti-heart${isFav ? '-filled' : ''}"></i>
+        </button>
         <span class="pl-dur">${t.duration ? Player.formatTime(t.duration) : '—'}</span>
       </div>`;
   }).join('');
 
-  // click to play
+  // Click row → play
   playlistEl.querySelectorAll('.playlist-item').forEach(el => {
-    el.addEventListener('click', () => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.fav-btn')) return; // don't trigger play on heart tap
       const id = parseInt(el.dataset.trackId, 10);
       Player.playById(id);
     });
   });
 
-  // scroll active into view
+  // Heart button → toggle favorite
+  playlistEl.querySelectorAll('.fav-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id  = parseInt(btn.dataset.id, 10);
+      const val = await dbToggleFavorite(id);
+      await Player.refreshLibrary();
+      renderPlaylist();
+      showToast(val ? '♥ Added to Favorites' : 'Removed from Favorites');
+    });
+  });
+
+  // Scroll active into view
   const activeEl = playlistEl.querySelector('.playlist-item.active');
   if (activeEl) activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
