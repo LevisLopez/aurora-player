@@ -1,13 +1,11 @@
 /* ═══════════════════════════════════════
-   app.js — UI controller
-   Handles: screen nav, player UI,
-   admin panel, file import, modals
+   app.js — UI controller v4
+   Favorites fix + Search
 ═══════════════════════════════════════ */
 
-/* ── DOM refs ─────────────────────────── */
 const $ = id => document.getElementById(id);
 
-// Player screen
+/* ── DOM refs ─────────────────────────── */
 const screenPlayer   = $('screen-player');
 const screenAdmin    = $('screen-admin');
 const trackTitle     = $('track-title');
@@ -29,28 +27,32 @@ const playlistCount  = $('playlist-count');
 const tabAll         = $('tab-all');
 const tabFav         = $('tab-fav');
 const emptyFavorites = $('empty-favorites');
+const searchInput    = $('search-input');
+const searchWrap     = $('search-wrap');
+const btnSearch      = $('btn-search');
 
-// Admin screen
-const btnBack       = $('btn-back');
-const btnAddSong    = $('btn-add-song');
-const fileInput     = $('file-input');
-const adminList     = $('admin-list');
-const adminCount    = $('admin-count');
-const adminSize     = $('admin-size');
-const emptyState    = $('empty-state');
+// Admin
+const btnBack     = $('btn-back');
+const btnAddSong  = $('btn-add-song');
+const fileInput   = $('file-input');
+const adminList   = $('admin-list');
+const adminCount  = $('admin-count');
+const adminSize   = $('admin-size');
+const emptyState  = $('empty-state');
 
-// Modal
-const modalRename   = $('modal-rename');
-const renameTitle   = $('rename-title');
-const renameArtist  = $('rename-artist');
-const modalCancel   = $('modal-cancel');
-const modalSave     = $('modal-save');
+// Modals
+const modalRename  = $('modal-rename');
+const renameTitle  = $('rename-title');
+const renameArtist = $('rename-artist');
+const modalCancel  = $('modal-cancel');
+const modalSave    = $('modal-save');
+const toastEl      = $('toast');
 
-// Toast
-const toastEl       = $('toast');
-
-let renamingId = null;
-let toastTimer = null;
+/* ── App state ────────────────────────── */
+let activeTab    = 'all';   // 'all' | 'favorites'
+let searchQuery  = '';
+let renamingId   = null;
+let toastTimer   = null;
 
 /* ── Toast ───────────────────────────── */
 function showToast(msg) {
@@ -66,31 +68,23 @@ function showScreen(name) {
   screenAdmin.classList.toggle('active', name === 'admin');
 }
 
-btnOpenAdmin.addEventListener('click', () => {
-  renderAdminList();
-  showScreen('admin');
-});
-
-btnBack.addEventListener('click', () => {
-  showScreen('player');
-});
+btnOpenAdmin.addEventListener('click', () => { renderAdminList(); showScreen('admin'); });
+btnBack.addEventListener('click',      () => showScreen('player'));
 
 /* ── Player callbacks ─────────────────── */
 Player.onTrackChange = (track) => {
   if (!track) {
     trackTitle.textContent  = 'No track loaded';
     trackArtist.textContent = 'Add songs to get started';
-    return;
+  } else {
+    trackTitle.textContent  = track.title  || 'Unknown';
+    trackArtist.textContent = track.artist || 'Unknown';
   }
-  trackTitle.textContent  = track.title  || 'Unknown';
-  trackArtist.textContent = track.artist || 'Unknown';
   renderPlaylist();
 };
 
 Player.onPlayState = (playing) => {
-  playIcon.className = playing
-    ? 'ti ti-player-pause'
-    : 'ti ti-player-play';
+  playIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
 };
 
 Player.onProgress = (ratio, current, total) => {
@@ -102,14 +96,12 @@ Player.onProgress = (ratio, current, total) => {
   progressWrap.setAttribute('aria-valuenow', Math.round(ratio * 100));
 };
 
-Player.onQueueChange = () => {
-  renderPlaylist();
-};
+Player.onQueueChange = () => renderPlaylist();
 
-/* ── Transport buttons ────────────────── */
-btnPlay.addEventListener('click', () => Player.togglePlay());
-btnPrev.addEventListener('click', () => Player.prev());
-btnNext.addEventListener('click', () => Player.next(true));
+/* ── Transport ────────────────────────── */
+btnPlay.addEventListener('click',    () => Player.togglePlay());
+btnPrev.addEventListener('click',    () => Player.prev());
+btnNext.addEventListener('click',    () => Player.next(true));
 
 btnShuffle.addEventListener('click', () => {
   const on = Player.toggleShuffle();
@@ -119,8 +111,8 @@ btnShuffle.addEventListener('click', () => {
 
 btnRepeat.addEventListener('click', () => {
   const mode = Player.cycleRepeat();
-  btnRepeat.classList.remove('on');
   const icon = btnRepeat.querySelector('i');
+  btnRepeat.classList.remove('on');
   if (mode === 'none') {
     icon.className = 'ti ti-repeat';
   } else if (mode === 'all') {
@@ -134,63 +126,95 @@ btnRepeat.addEventListener('click', () => {
   }
 });
 
-/* ── Tabs: ALL | FAVORITES ────────────── */
-tabAll.addEventListener('click', async () => {
-  tabAll.classList.add('active');
-  tabFav.classList.remove('active');
-  Player.setFavoritesOnly(false);
-  await Player.refreshLibrary();
-  renderPlaylist();
-});
-
-tabFav.addEventListener('click', async () => {
-  tabFav.classList.add('active');
-  tabAll.classList.remove('active');
-  Player.setFavoritesOnly(true);
-  await Player.refreshLibrary();
-  renderPlaylist();
-});
+/* ── Seek ─────────────────────────────── */
 function seekFromEvent(e) {
   const rect  = progressWrap.getBoundingClientRect();
   const x     = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-  const ratio = Math.min(Math.max(x / rect.width, 0), 1);
-  Player.seek(ratio);
+  Player.seek(Math.min(Math.max(x / rect.width, 0), 1));
 }
 progressWrap.addEventListener('click',      seekFromEvent);
 progressWrap.addEventListener('touchstart', seekFromEvent, { passive: true });
 
+/* ── Search ───────────────────────────── */
+btnSearch.addEventListener('click', () => {
+  const open = searchWrap.classList.toggle('open');
+  if (open) {
+    searchInput.focus();
+  } else {
+    searchInput.value = '';
+    searchQuery = '';
+    renderPlaylist();
+  }
+});
+
+searchInput.addEventListener('input', () => {
+  searchQuery = searchInput.value.toLowerCase().trim();
+  renderPlaylist();
+});
+
+/* ── Tabs ─────────────────────────────── */
+tabAll.addEventListener('click', () => {
+  if (activeTab === 'all') return;
+  activeTab = 'all';
+  tabAll.classList.add('active');
+  tabFav.classList.remove('active');
+  Player.setFavoritesOnly(false);
+  renderPlaylist();
+});
+
+tabFav.addEventListener('click', () => {
+  if (activeTab === 'favorites') return;
+  activeTab = 'favorites';
+  tabFav.classList.add('active');
+  tabAll.classList.remove('active');
+  Player.setFavoritesOnly(true);
+  renderPlaylist();
+});
+
 /* ── Playlist render ──────────────────── */
-function renderPlaylist() {
-  const tracks  = Player.tracks;
-  const queue   = Player.queue;
-  const current = Player.currentTrack();
-  const favOnly = Player.favoritesOnly;
+function getDisplayTracks() {
+  let list = Player.tracks;
 
-  // Which tracks to show in the list (visual, not playback queue)
-  const displayTracks = favOnly
-    ? tracks.filter(t => t.favorite)
-    : tracks;
-
-  playlistCount.textContent = `${displayTracks.length} song${displayTracks.length !== 1 ? 's' : ''}`;
-
-  // Show empty favorites message if needed
-  const noFavs = favOnly && displayTracks.length === 0;
-  emptyFavorites.hidden = !noFavs;
-  playlistEl.style.display = noFavs ? 'none' : '';
-
-  if (!displayTracks.length) {
-    playlistEl.innerHTML = '';
-    return;
+  // Filter by tab
+  if (activeTab === 'favorites') {
+    list = list.filter(t => t.favorite === true);
   }
 
-  // Build display: show position number from queue if in queue, else just index
-  playlistEl.innerHTML = displayTracks.map((t, displayIdx) => {
-    const isActive  = t.id === current?.id;
-    const isFav     = !!t.favorite;
+  // Filter by search
+  if (searchQuery) {
+    list = list.filter(t =>
+      (t.title  || '').toLowerCase().includes(searchQuery) ||
+      (t.artist || '').toLowerCase().includes(searchQuery)
+    );
+  }
+
+  return list;
+}
+
+function renderPlaylist() {
+  const current       = Player.currentTrack();
+  const displayTracks = getDisplayTracks();
+
+  // Count label
+  const total = Player.tracks.length;
+  playlistCount.textContent = activeTab === 'favorites'
+    ? `${displayTracks.length} of ${total}`
+    : `${displayTracks.length} song${displayTracks.length !== 1 ? 's' : ''}`;
+
+  // Empty favorites
+  const noFavs = activeTab === 'favorites' && displayTracks.length === 0 && !searchQuery;
+  emptyFavorites.hidden    = !noFavs;
+  playlistEl.style.display = noFavs ? 'none' : '';
+
+  if (!displayTracks.length) { playlistEl.innerHTML = ''; return; }
+
+  playlistEl.innerHTML = displayTracks.map((t, idx) => {
+    const isActive = t.id === current?.id;
+    const isFav    = t.favorite === true;
 
     const numLabel = isActive
       ? `<div class="playing-bars" aria-label="Playing"><span></span><span></span><span></span></div>`
-      : `<span class="pl-num">${displayIdx + 1}</span>`;
+      : `<span class="pl-num">${idx + 1}</span>`;
 
     return `
       <div class="playlist-item ${isActive ? 'active' : ''}" data-track-id="${t.id}" role="button" tabindex="0">
@@ -199,7 +223,8 @@ function renderPlaylist() {
           <div class="pl-title">${escHtml(t.title || 'Unknown')}</div>
           <div class="pl-artist">${escHtml(t.artist || 'Unknown')}</div>
         </div>
-        <button class="fav-btn ${isFav ? 'on' : ''}" data-id="${t.id}" aria-label="${isFav ? 'Remove from favorites' : 'Add to favorites'}">
+        <button class="fav-btn ${isFav ? 'on' : ''}" data-id="${t.id}"
+          aria-label="${isFav ? 'Remove from favorites' : 'Add to favorites'}">
           <i class="ti ti-heart${isFav ? '-filled' : ''}"></i>
         </button>
         <span class="pl-dur">${t.duration ? Player.formatTime(t.duration) : '—'}</span>
@@ -209,21 +234,34 @@ function renderPlaylist() {
   // Click row → play
   playlistEl.querySelectorAll('.playlist-item').forEach(el => {
     el.addEventListener('click', (e) => {
-      if (e.target.closest('.fav-btn')) return; // don't trigger play on heart tap
-      const id = parseInt(el.dataset.trackId, 10);
-      Player.playById(id);
+      if (e.target.closest('.fav-btn')) return;
+      Player.playById(parseInt(el.dataset.trackId, 10));
     });
   });
 
-  // Heart button → toggle favorite
+  // Heart → toggle favorite
   playlistEl.querySelectorAll('.fav-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
-      const id  = parseInt(btn.dataset.id, 10);
-      const val = await dbToggleFavorite(id);
-      await Player.refreshLibrary();
+      const id     = parseInt(btn.dataset.id, 10);
+      const isFav  = btn.classList.contains('on');
+      const newFav = !isFav;
+
+      // 1. Write to DB
+      await dbToggleFavorite(id);
+
+      // 2. Update in-memory track directly (no full reload needed)
+      const track = Player.tracks.find(t => t.id === id);
+      if (track) track.favorite = newFav;
+
+      // 3. If favoritesOnly mode changed, rebuild queue
+      if (activeTab === 'favorites') {
+        Player.setFavoritesOnly(true);
+      }
+
+      // 4. Re-render
       renderPlaylist();
-      showToast(val ? '♥ Added to Favorites' : 'Removed from Favorites');
+      showToast(newFav ? '♥ Added to Favorites' : 'Removed from Favorites');
     });
   });
 
@@ -232,17 +270,13 @@ function renderPlaylist() {
   if (activeEl) activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
-/* ── Admin list render ────────────────── */
+/* ── Admin render ─────────────────────── */
 async function renderAdminList() {
-  const tracks = Player.tracks;
-
-  // update stats
+  const tracks    = Player.tracks;
   const totalSize = await dbGetTotalSize();
   adminCount.textContent = `${tracks.length} song${tracks.length !== 1 ? 's' : ''}`;
   adminSize.textContent  = `${(totalSize / 1024 / 1024).toFixed(1)} MB used`;
-
   emptyState.classList.toggle('visible', tracks.length === 0);
-
   if (!tracks.length) { adminList.innerHTML = ''; return; }
 
   adminList.innerHTML = tracks.map(t => `
@@ -253,23 +287,15 @@ async function renderAdminList() {
         <div class="admin-artist">${escHtml(t.artist || 'Unknown')}</div>
       </div>
       <div class="admin-actions">
-        <button class="admin-btn edit-btn" aria-label="Edit" data-id="${t.id}">
-          <i class="ti ti-pencil"></i>
-        </button>
-        <button class="admin-btn delete delete-btn" aria-label="Delete" data-id="${t.id}">
-          <i class="ti ti-trash"></i>
-        </button>
+        <button class="admin-btn edit-btn"   aria-label="Edit"   data-id="${t.id}"><i class="ti ti-pencil"></i></button>
+        <button class="admin-btn delete delete-btn" aria-label="Delete" data-id="${t.id}"><i class="ti ti-trash"></i></button>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 
-  adminList.querySelectorAll('.edit-btn').forEach(btn => {
-    btn.addEventListener('click', () => openRenameModal(parseInt(btn.dataset.id, 10)));
-  });
-
-  adminList.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => deleteSong(parseInt(btn.dataset.id, 10)));
-  });
+  adminList.querySelectorAll('.edit-btn').forEach(btn =>
+    btn.addEventListener('click', () => openRenameModal(parseInt(btn.dataset.id, 10))));
+  adminList.querySelectorAll('.delete-btn').forEach(btn =>
+    btn.addEventListener('click', () => deleteSong(parseInt(btn.dataset.id, 10))));
 }
 
 /* ── File import ──────────────────────── */
@@ -279,48 +305,30 @@ fileInput.addEventListener('change', async () => {
   const files = Array.from(fileInput.files);
   if (!files.length) return;
 
-  // Audio extensions accepted — covers files with wrong/empty MIME type (common on Android)
   const AUDIO_EXTS = /\.(mp3|mp4|m4a|ogg|oga|opus|wav|flac|aac|weba|webm)$/i;
+  let added = 0, skipped = 0;
 
-  let added = 0;
-  let skipped = 0;
   for (const file of files) {
     const validMime = file.type.startsWith('audio/') || file.type.startsWith('video/mp4');
     const validExt  = AUDIO_EXTS.test(file.name);
     if (!validMime && !validExt) { skipped++; continue; }
 
-    // parse title/artist from filename  e.g. "Artist - Title.mp3"
     const nameNoExt = file.name.replace(/\.[^/.]+$/, '');
-    let title  = nameNoExt;
-    let artist = 'Unknown';
+    let title = nameNoExt, artist = 'Unknown';
+    const dash = nameNoExt.indexOf(' - ');
+    if (dash !== -1) { artist = nameNoExt.slice(0, dash).trim(); title = nameNoExt.slice(dash + 3).trim(); }
 
-    const dashIdx = nameNoExt.indexOf(' - ');
-    if (dashIdx !== -1) {
-      artist = nameNoExt.slice(0, dashIdx).trim();
-      title  = nameNoExt.slice(dashIdx + 3).trim();
-    }
-
-    // get duration
     const duration = await getAudioDuration(file);
-
-    await dbSaveTrack({
-      title,
-      artist,
-      blob:     file,
-      duration,
-      size:     file.size,
-    });
+    await dbSaveTrack({ title, artist, blob: file, duration, size: file.size, favorite: false });
     added++;
   }
 
   fileInput.value = '';
-
   if (added > 0) {
     await Player.refreshLibrary();
     renderAdminList();
-    const msg = skipped > 0
-      ? `${added} added, ${skipped} format not supported`
-      : `${added} song${added > 1 ? 's' : ''} added`;
+    renderPlaylist();
+    const msg = skipped > 0 ? `${added} added, ${skipped} skipped` : `${added} song${added > 1 ? 's' : ''} added`;
     showToast(msg);
   } else if (skipped > 0) {
     showToast('No supported audio files found');
@@ -332,20 +340,18 @@ function getAudioDuration(file) {
     const url = URL.createObjectURL(file);
     const a   = new Audio();
     a.src     = url;
-    a.addEventListener('loadedmetadata', () => {
-      URL.revokeObjectURL(url);
-      resolve(isFinite(a.duration) ? a.duration : 0);
-    });
-    a.addEventListener('error', () => { URL.revokeObjectURL(url); resolve(0); });
+    a.addEventListener('loadedmetadata', () => { URL.revokeObjectURL(url); resolve(isFinite(a.duration) ? a.duration : 0); });
+    a.addEventListener('error',          () => { URL.revokeObjectURL(url); resolve(0); });
   });
 }
 
-/* ── Delete song ──────────────────────── */
+/* ── Delete ───────────────────────────── */
 async function deleteSong(id) {
   if (!confirm('Remove this song from your library?')) return;
   await dbDeleteTrack(id);
   await Player.refreshLibrary();
   renderAdminList();
+  renderPlaylist();
   showToast('Song removed');
 }
 
@@ -353,42 +359,65 @@ async function deleteSong(id) {
 function openRenameModal(id) {
   const track = Player.tracks.find(t => t.id === id);
   if (!track) return;
-  renamingId             = id;
-  renameTitle.value      = track.title  || '';
-  renameArtist.value     = track.artist || '';
-  modalRename.hidden     = false;
+  renamingId         = id;
+  renameTitle.value  = track.title  || '';
+  renameArtist.value = track.artist || '';
+  modalRename.hidden = false;
   renameTitle.focus();
 }
 
-modalCancel.addEventListener('click', () => {
-  modalRename.hidden = true;
-  renamingId = null;
-});
+modalCancel.addEventListener('click', () => { modalRename.hidden = true; renamingId = null; });
+modalRename.addEventListener('click', (e) => { if (e.target === modalRename) { modalRename.hidden = true; renamingId = null; } });
 
 modalSave.addEventListener('click', async () => {
   if (!renamingId) return;
-  const newTitle  = renameTitle.value.trim()  || 'Unknown';
-  const newArtist = renameArtist.value.trim() || 'Unknown';
-  await dbUpdateTrack(renamingId, { title: newTitle, artist: newArtist });
+  await dbUpdateTrack(renamingId, {
+    title:  renameTitle.value.trim()  || 'Unknown',
+    artist: renameArtist.value.trim() || 'Unknown',
+  });
   await Player.refreshLibrary();
   renderAdminList();
+  renderPlaylist();
   modalRename.hidden = true;
   renamingId = null;
   showToast('Track updated');
 });
 
-modalRename.addEventListener('click', (e) => {
-  if (e.target === modalRename) { modalRename.hidden = true; renamingId = null; }
-});
-
 /* ── Util ─────────────────────────────── */
 function escHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+/* ── Sleep Timer UI ───────────────────── */
+const btnSleepOpen     = $('btn-sleep');
+const modalSleep       = $('modal-sleep');
+const modalSleepCancel = $('modal-sleep-cancel');
+const sleepCustomInput = $('sleep-custom-input');
+const sleepCustomSet   = $('sleep-custom-set');
+
+btnSleepOpen.addEventListener('click', () => {
+  if (SleepTimer.active) { SleepTimer.cancel(); showToast('Sleep timer cancelled'); return; }
+  modalSleep.hidden = false;
+});
+modalSleepCancel.addEventListener('click', () => { modalSleep.hidden = true; });
+modalSleep.addEventListener('click', (e) => { if (e.target === modalSleep) modalSleep.hidden = true; });
+
+document.querySelectorAll('.sleep-opt-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    SleepTimer.start(parseInt(btn.dataset.minutes, 10));
+    modalSleep.hidden = true;
+    showToast(`Sleep timer: ${btn.textContent}`);
+  });
+});
+
+sleepCustomSet.addEventListener('click', () => {
+  const val = parseInt(sleepCustomInput.value, 10);
+  if (!val || val < 1 || val > 480) { showToast('Enter 1–480 minutes'); return; }
+  SleepTimer.start(val);
+  modalSleep.hidden = true;
+  sleepCustomInput.value = '';
+  showToast(`Sleep timer: ${val} min`);
+});
 
 /* ── Init ─────────────────────────────── */
 (async () => {
@@ -397,56 +426,6 @@ function escHtml(str) {
   renderPlaylist();
 })();
 
-/* ── Service Worker ───────────────────── */
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  });
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
-
-/* ── Sleep Timer UI ───────────────────── */
-const btnSleepOpen      = $('btn-sleep');
-const modalSleep        = $('modal-sleep');
-const modalSleepCancel  = $('modal-sleep-cancel');
-const sleepCustomInput  = $('sleep-custom-input');
-const sleepCustomSet    = $('sleep-custom-set');
-
-btnSleepOpen.addEventListener('click', () => {
-  if (SleepTimer.active) {
-    SleepTimer.cancel();
-    showToast('Sleep timer cancelled');
-    return;
-  }
-  modalSleep.hidden = false;
-});
-
-modalSleepCancel.addEventListener('click', () => {
-  modalSleep.hidden = true;
-});
-
-modalSleep.addEventListener('click', (e) => {
-  if (e.target === modalSleep) modalSleep.hidden = true;
-});
-
-// Quick option buttons
-document.querySelectorAll('.sleep-opt-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const minutes = parseInt(btn.dataset.minutes, 10);
-    SleepTimer.start(minutes);
-    modalSleep.hidden = true;
-    showToast(`Sleep timer set for ${btn.textContent}`);
-  });
-});
-
-// Custom minutes
-sleepCustomSet.addEventListener('click', () => {
-  const val = parseInt(sleepCustomInput.value, 10);
-  if (!val || val < 1 || val > 480) {
-    showToast('Enter a value between 1 and 480 minutes');
-    return;
-  }
-  SleepTimer.start(val);
-  modalSleep.hidden = true;
-  sleepCustomInput.value = '';
-  showToast(`Sleep timer set for ${val} min`);
-});
