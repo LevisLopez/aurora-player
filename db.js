@@ -61,13 +61,13 @@ async function dbGetTrack(id) {
   });
 }
 
-// Update title/artist for a track
+// Update any fields on a track (merges with existing record)
 async function dbUpdateTrack(id, updates) {
   const track = await dbGetTrack(id);
   if (!track) return;
   const merged = { ...track, ...updates };
-  const db     = await openDB();
-  const store  = db.transaction(STORE_TRACKS, 'readwrite').objectStore(STORE_TRACKS);
+  const db    = await openDB();
+  const store = db.transaction(STORE_TRACKS, 'readwrite').objectStore(STORE_TRACKS);
   return new Promise((resolve, reject) => {
     const req = store.put(merged);
     req.onsuccess = () => resolve();
@@ -92,11 +92,31 @@ async function dbGetTotalSize() {
   return tracks.reduce((sum, t) => sum + (t.size || 0), 0);
 }
 
-// Toggle favorite status for a track
+// Toggle favorite — reads, flips, writes in one clean flow
 async function dbToggleFavorite(id) {
-  const track = await dbGetTrack(id);
+  const db    = await openDB();
+  const store = db.transaction(STORE_TRACKS, 'readwrite').objectStore(STORE_TRACKS);
+
+  // Read
+  const track = await new Promise((resolve, reject) => {
+    const req = store.get(id);
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror   = (e) => reject(e.target.error);
+  });
+
   if (!track) return false;
-  const newVal = !track.favorite;
-  await dbUpdateTrack(id, { favorite: newVal });
-  return newVal;
+
+  // Flip
+  track.favorite = !track.favorite;
+
+  // Write back in the SAME transaction
+  const db2    = await openDB();
+  const store2 = db2.transaction(STORE_TRACKS, 'readwrite').objectStore(STORE_TRACKS);
+  await new Promise((resolve, reject) => {
+    const req = store2.put(track);
+    req.onsuccess = () => resolve();
+    req.onerror   = (e) => reject(e.target.error);
+  });
+
+  return track.favorite;
 }
