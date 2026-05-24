@@ -38,6 +38,7 @@ const SleepTimer = (() => {
 
     badge.hidden  = false;
     btnSleep.classList.add('sleep-on');
+    document.body.classList.add('night-mode'); // 🌙 visual mode
 
     // Ticker: update countdown every second
     tickerId = setInterval(() => {
@@ -93,6 +94,7 @@ const SleepTimer = (() => {
     overlay.classList.remove('fading');
     audio.volume   = 1;
     btnSleep.classList.remove('sleep-on');
+    document.body.classList.remove('night-mode'); // restore colors
   }
 
   // ── Cancel button ─────────────────────
