@@ -135,16 +135,20 @@ btnRepeat.addEventListener('click', () => {
 });
 
 /* ── Tabs: ALL | FAVORITES ────────────── */
-tabAll.addEventListener('click', () => {
+tabAll.addEventListener('click', async () => {
   tabAll.classList.add('active');
   tabFav.classList.remove('active');
   Player.setFavoritesOnly(false);
+  await Player.refreshLibrary();
+  renderPlaylist();
 });
 
-tabFav.addEventListener('click', () => {
+tabFav.addEventListener('click', async () => {
   tabFav.classList.add('active');
   tabAll.classList.remove('active');
   Player.setFavoritesOnly(true);
+  await Player.refreshLibrary();
+  renderPlaylist();
 });
 function seekFromEvent(e) {
   const rect  = progressWrap.getBoundingClientRect();
