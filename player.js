@@ -1,44 +1,48 @@
 /* ═══════════════════════════════════════
-   player.js — Audio engine
-   Handles: playback, shuffle, repeat,
-   progress, Media Session API (lock screen)
+   player.js — Audio engine v5
 ═══════════════════════════════════════ */
-
 const Player = (() => {
 
-  // ── State ──────────────────────────────
-  let tracks        = [];   // array of track objects from DB
-  let queue         = [];   // playback order (indexes into tracks[])
-  let queuePos      = 0;    // current position in queue
+  let tracks        = [];
+  let queue         = [];
+  let queuePos      = 0;
   let isPlaying     = false;
   let shuffleOn     = false;
-  let repeatMode    = 'none'; // 'none' | 'all' | 'one'
+  let repeatMode    = 'none';
+  let favoritesOnly = false;
   let currentObjectURL = null;
 
   const audio = document.getElementById('audio');
+  let onTrackChange = null, onPlayState = null, onProgress = null, onQueueChange = null;
 
-  // ── Callbacks (set by app.js) ───────────
-  let onTrackChange = null;
-  let onPlayState   = null;
-  let onProgress    = null;
-  let onQueueChange = null;
+  // ── Save/restore last track ──────────────
+  function saveSession() {
+    const t = currentTrack();
+    if (t) {
+      localStorage.setItem('aurora_last_id',   t.id);
+      localStorage.setItem('aurora_last_time', audio.currentTime || 0);
+    }
+  }
 
-  // ── Helpers ────────────────────────────
+  // ── Queue ────────────────────────────────
   function buildQueue() {
+    const source = favoritesOnly
+      ? tracks.map((_, i) => i).filter(i => tracks[i].favorite === true)
+      : tracks.map((_, i) => i);
     if (shuffleOn) {
-      const arr = tracks.map((_, i) => i);
+      const arr = [...source];
       for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [arr[i], arr[j]] = [arr[j], arr[i]];
       }
       queue = arr;
     } else {
-      queue = tracks.map((_, i) => i);
+      queue = source;
     }
   }
 
   function currentTrack() {
-    if (!tracks.length) return null;
+    if (!tracks.length || queue.length === 0) return null;
     return tracks[queue[queuePos]] || null;
   }
 
@@ -49,92 +53,57 @@ const Player = (() => {
     return `${m}:${s}`;
   }
 
-  // ── Load & play a track ─────────────────
-  async function loadTrack(trackIndex, autoPlay = false) {
-    // find position in queue
+  // ── Load track ───────────────────────────
+  async function loadTrack(trackIndex, autoPlay = false, seekTo = 0) {
     const pos = queue.indexOf(trackIndex);
     if (pos !== -1) queuePos = pos;
-
     const track = tracks[trackIndex];
     if (!track) return;
-
-    // revoke previous object URL
     if (currentObjectURL) URL.revokeObjectURL(currentObjectURL);
-
-    // fetch blob from IndexedDB
     const full = await dbGetTrack(track.id);
     if (!full || !full.blob) return;
-
     currentObjectURL = URL.createObjectURL(full.blob);
     audio.src = currentObjectURL;
     audio.load();
-
+    if (seekTo > 0) audio.currentTime = seekTo;
     if (onTrackChange) onTrackChange(track);
     updateMediaSession(track);
-
-    if (autoPlay) {
-      const p = audio.play();
-      if (p) p.catch(() => {});
-    }
+    if (autoPlay) { const p = audio.play(); if (p) p.catch(() => {}); }
   }
 
-  // ── Transport controls ──────────────────
-  function play() {
-    if (!tracks.length) return;
-    const p = audio.play();
-    if (p) p.catch(() => {});
-  }
-
-  function pause() {
-    audio.pause();
-  }
-
-  function togglePlay() {
-    if (audio.paused) play();
-    else pause();
-  }
+  // ── Transport ────────────────────────────
+  function play()       { if (!tracks.length) return; const p = audio.play(); if (p) p.catch(() => {}); }
+  function pause()      { audio.pause(); }
+  function togglePlay() { if (audio.paused) play(); else pause(); }
 
   function next(autoPlay = true) {
-    if (!tracks.length) return;
-    if (repeatMode === 'one') {
-      audio.currentTime = 0;
-      if (autoPlay) play();
-      return;
-    }
+    if (!tracks.length || !queue.length) return;
+    if (repeatMode === 'one') { audio.currentTime = 0; if (autoPlay) play(); return; }
     queuePos = (queuePos + 1) % queue.length;
     loadTrack(queue[queuePos], autoPlay);
     if (onQueueChange) onQueueChange();
   }
 
   function prev() {
-    if (!tracks.length) return;
-    if (audio.currentTime > 3) {
-      audio.currentTime = 0;
-      return;
-    }
+    if (!tracks.length || !queue.length) return;
+    if (audio.currentTime > 3) { audio.currentTime = 0; return; }
     queuePos = (queuePos - 1 + queue.length) % queue.length;
     loadTrack(queue[queuePos], true);
     if (onQueueChange) onQueueChange();
   }
 
-  function seek(ratio) {
-    if (!audio.duration) return;
-    audio.currentTime = ratio * audio.duration;
-  }
+  function seek(ratio) { if (audio.duration) audio.currentTime = ratio * audio.duration; }
 
-  // ── Shuffle ─────────────────────────────
   function toggleShuffle() {
     shuffleOn = !shuffleOn;
     const cur = queue[queuePos];
     buildQueue();
-    // keep current track at current position
     const newPos = queue.indexOf(cur);
     if (newPos !== -1) queuePos = newPos;
     if (onQueueChange) onQueueChange();
     return shuffleOn;
   }
 
-  // ── Repeat ──────────────────────────────
   function cycleRepeat() {
     if (repeatMode === 'none') repeatMode = 'all';
     else if (repeatMode === 'all') repeatMode = 'one';
@@ -142,18 +111,30 @@ const Player = (() => {
     return repeatMode;
   }
 
-  // ── Load tracks list from DB ─────────────
+  // ── Load library ─────────────────────────
   async function loadLibrary() {
     tracks = await dbGetAllTracks();
     buildQueue();
-    queuePos = 0;
-    if (tracks.length > 0) {
+
+    if (!tracks.length) { if (onQueueChange) onQueueChange(); return; }
+
+    // Restore last session
+    const lastId   = parseInt(localStorage.getItem('aurora_last_id')  || '0', 10);
+    const lastTime = parseFloat(localStorage.getItem('aurora_last_time') || '0');
+    const lastIdx  = tracks.findIndex(t => t.id === lastId);
+
+    if (lastIdx !== -1) {
+      const posInQueue = queue.indexOf(lastIdx);
+      if (posInQueue !== -1) queuePos = posInQueue;
+      await loadTrack(queue[queuePos], false, lastTime);
+    } else {
+      queuePos = 0;
       await loadTrack(queue[0], false);
     }
     if (onQueueChange) onQueueChange();
   }
 
-  // ── Play by track id ─────────────────────
+  // ── Play by id ───────────────────────────
   async function playById(trackId) {
     const idx = tracks.findIndex(t => t.id === trackId);
     if (idx === -1) return;
@@ -161,13 +142,12 @@ const Player = (() => {
     if (onQueueChange) onQueueChange();
   }
 
-  // ── Reload library and keep current ──────
+  // ── Refresh library ──────────────────────
   async function refreshLibrary() {
     const currentId = currentTrack()?.id ?? null;
     tracks = await dbGetAllTracks();
     buildQueue();
-
-    if (tracks.length === 0) {
+    if (!tracks.length) {
       audio.src = '';
       if (currentObjectURL) URL.revokeObjectURL(currentObjectURL);
       currentObjectURL = null;
@@ -176,8 +156,6 @@ const Player = (() => {
       if (onQueueChange) onQueueChange();
       return;
     }
-
-    // try to stay on same track
     if (currentId) {
       const newIdx = tracks.findIndex(t => t.id === currentId);
       if (newIdx !== -1) {
@@ -191,17 +169,27 @@ const Player = (() => {
       queuePos = 0;
       await loadTrack(queue[0], false);
     }
-
     if (onQueueChange) onQueueChange();
   }
 
-  // ── Media Session API (lock screen) ──────
+  // ── setFavoritesOnly ─────────────────────
+  function setFavoritesOnly(val) {
+    favoritesOnly = val;
+    const cur = currentTrack()?.id ?? null;
+    buildQueue();
+    if (queue.length === 0) { queuePos = 0; }
+    else {
+      const newPos = queue.findIndex(i => tracks[i]?.id === cur);
+      queuePos = newPos !== -1 ? newPos : 0;
+    }
+    if (onQueueChange) onQueueChange();
+  }
+
+  // ── Media Session ────────────────────────
   function updateMediaSession(track) {
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.metadata = new MediaMetadata({
-      title:  track?.title  || 'Unknown',
-      artist: track?.artist || 'Unknown',
-      album:  'Aurora Player',
+      title: track?.title || 'Unknown', artist: track?.artist || 'Unknown', album: 'Aurora Player',
       artwork: [
         { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
         { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -211,13 +199,11 @@ const Player = (() => {
 
   function setupMediaSession() {
     if (!('mediaSession' in navigator)) return;
-    navigator.mediaSession.setActionHandler('play',         () => play());
-    navigator.mediaSession.setActionHandler('pause',        () => pause());
-    navigator.mediaSession.setActionHandler('nexttrack',    () => next(true));
-    navigator.mediaSession.setActionHandler('previoustrack',() => prev());
-    navigator.mediaSession.setActionHandler('seekto', (d)  => {
-      if (d.seekTime !== undefined) audio.currentTime = d.seekTime;
-    });
+    navigator.mediaSession.setActionHandler('play',          () => play());
+    navigator.mediaSession.setActionHandler('pause',         () => pause());
+    navigator.mediaSession.setActionHandler('nexttrack',     () => next(true));
+    navigator.mediaSession.setActionHandler('previoustrack', () => prev());
+    navigator.mediaSession.setActionHandler('seekto', (d)   => { if (d.seekTime !== undefined) audio.currentTime = d.seekTime; });
   }
 
   // ── Audio events ─────────────────────────
@@ -227,67 +213,45 @@ const Player = (() => {
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     if (onPlayState) onPlayState(true);
   });
-
   audio.addEventListener('pause', () => {
     isPlaying = false;
     document.body.classList.remove('playing');
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     if (onPlayState) onPlayState(false);
+    saveSession(); // save position on pause
   });
-
   audio.addEventListener('ended', () => {
-    if (repeatMode === 'one') {
-      audio.currentTime = 0;
-      play();
-    } else if (repeatMode === 'all') {
-      next(true);
-    } else {
-      // 'none': stop at last track
-      if (queuePos < queue.length - 1) next(true);
-      else { isPlaying = false; if (onPlayState) onPlayState(false); }
-    }
+    saveSession();
+    if (repeatMode === 'one') { audio.currentTime = 0; play(); }
+    else if (repeatMode === 'all') { next(true); }
+    else { if (queuePos < queue.length - 1) next(true); else { isPlaying = false; if (onPlayState) onPlayState(false); } }
   });
-
   audio.addEventListener('timeupdate', () => {
     if (!audio.duration) return;
     const ratio = audio.currentTime / audio.duration;
     if (onProgress) onProgress(ratio, audio.currentTime, audio.duration);
-    // update Media Session position
     if ('mediaSession' in navigator && navigator.mediaSession.setPositionState) {
-      try {
-        navigator.mediaSession.setPositionState({
-          duration:     audio.duration,
-          playbackRate: audio.playbackRate,
-          position:     audio.currentTime,
-        });
-      } catch (_) {}
+      try { navigator.mediaSession.setPositionState({ duration: audio.duration, playbackRate: audio.playbackRate, position: audio.currentTime }); } catch (_) {}
     }
   });
 
-  // ── Public API ───────────────────────────
+  // Save on page hide (tab switch, app close)
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveSession(); });
+  window.addEventListener('pagehide', saveSession);
+
   return {
-    loadLibrary,
-    refreshLibrary,
-    playById,
-    togglePlay,
-    next,
-    prev,
-    seek,
-    toggleShuffle,
-    cycleRepeat,
-    setupMediaSession,
-    currentTrack,
-    get tracks()     { return tracks; },
-    get queue()      { return queue; },
-    get queuePos()   { return queuePos; },
-    get isPlaying()  { return isPlaying; },
-    get shuffleOn()  { return shuffleOn; },
-    get repeatMode() { return repeatMode; },
-    formatTime,
+    loadLibrary, refreshLibrary, playById, togglePlay, next, prev, seek,
+    toggleShuffle, cycleRepeat, setupMediaSession, setFavoritesOnly, currentTrack, formatTime,
+    get tracks()        { return tracks; },
+    get queue()         { return queue; },
+    get queuePos()      { return queuePos; },
+    get isPlaying()     { return isPlaying; },
+    get shuffleOn()     { return shuffleOn; },
+    get repeatMode()    { return repeatMode; },
+    get favoritesOnly() { return favoritesOnly; },
     set onTrackChange(fn) { onTrackChange = fn; },
     set onPlayState(fn)   { onPlayState   = fn; },
     set onProgress(fn)    { onProgress    = fn; },
     set onQueueChange(fn) { onQueueChange = fn; },
   };
-
 })();
