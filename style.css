@@ -704,16 +704,17 @@ body.night-mode .eq-bar { transition: background 1s ease; }
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 20px 0;
+  margin: 0 20px;
   max-height: 0;
   overflow: hidden;
   opacity: 0;
   transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+  flex-shrink: 0;
 }
 .search-wrap.open {
-  max-height: 50px;
+  max-height: 48px;
   opacity: 1;
-  margin: 4px 20px 0;
+  margin: 2px 20px 4px;
 }
 .search-wrap > i {
   color: var(--text3);
