@@ -24,6 +24,8 @@ const btnOpenAdmin   = $('btn-open-admin');
 const btnSearch      = $('btn-search');
 const searchWrap     = $('search-wrap');
 const searchInput    = $('search-input');
+const searchResults  = $('search-results');
+const searchBack     = $('search-back');
 const playlistEl     = $('playlist');
 const playlistCount  = $('playlist-count');
 const tabAll         = $('tab-all');
@@ -108,16 +110,79 @@ function seekFromEvent(e) {
 progressWrap.addEventListener('click',      seekFromEvent);
 progressWrap.addEventListener('touchstart', seekFromEvent, { passive: true });
 
-/* ── Search ───────────────────────────── */
-btnSearch.addEventListener('click', () => {
-  const open = searchWrap.classList.toggle('open');
-  if (open) { setTimeout(() => searchInput.focus(), 300); }
-  else { searchInput.value = ''; searchQuery = ''; renderPlaylist(); }
-});
+/* ── Search overlay ──────────────────── */
+function openSearch() {
+  searchWrap.classList.add('open');
+  setTimeout(() => searchInput.focus(), 300);
+}
+function closeSearch() {
+  searchWrap.classList.remove('open');
+  searchInput.value = '';
+  searchQuery = '';
+  searchResults.innerHTML = '';
+}
+
+btnSearch.addEventListener('click', openSearch);
+searchBack.addEventListener('click', closeSearch);
+
 searchInput.addEventListener('input', () => {
   searchQuery = searchInput.value.toLowerCase().trim();
-  renderPlaylist();
+  renderSearchResults();
 });
+
+function renderSearchResults() {
+  const current = Player.currentTrack();
+  let list = Player.tracks;
+  if (searchQuery) {
+    list = list.filter(t =>
+      (t.title  || '').toLowerCase().includes(searchQuery) ||
+      (t.artist || '').toLowerCase().includes(searchQuery)
+    );
+  }
+
+  if (!searchQuery) { searchResults.innerHTML = '<div style="padding:20px;color:var(--text3);text-align:center;font-size:14px;">Type to search...</div>'; return; }
+  if (!list.length)  { searchResults.innerHTML = '<div style="padding:20px;color:var(--text3);text-align:center;font-size:14px;">No results found</div>'; return; }
+
+  searchResults.innerHTML = list.map((t, idx) => {
+    const isActive = t.id === current?.id;
+    const isFav    = t.favorite === true;
+    return `
+      <div class="playlist-item ${isActive ? 'active' : ''}" data-id="${t.id}" role="button" tabindex="0">
+        <span class="pl-num">${idx + 1}</span>
+        <div class="pl-info">
+          <div class="pl-title">${escHtml(t.title  || 'Unknown')}</div>
+          <div class="pl-artist">${escHtml(t.artist || 'Unknown')}</div>
+        </div>
+        <button class="fav-btn ${isFav ? 'on' : ''}" data-id="${t.id}" aria-label="Favorite">
+          <i class="ti ti-heart${isFav ? '-filled' : ''}"></i>
+        </button>
+        <span class="pl-dur">${t.duration ? Player.formatTime(t.duration) : '—'}</span>
+      </div>`;
+  }).join('');
+
+  searchResults.querySelectorAll('.playlist-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.fav-btn')) return;
+      Player.playById(parseInt(el.dataset.id, 10));
+      closeSearch();
+    });
+  });
+
+  searchResults.querySelectorAll('.fav-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id     = parseInt(btn.dataset.id, 10);
+      const newFav = !(btn.classList.contains('on'));
+      await dbToggleFavorite(id);
+      const t = Player.tracks.find(t => t.id === id);
+      if (t) t.favorite = newFav;
+      if (activeTab === 'favorites') Player.setFavoritesOnly(true);
+      renderPlaylist();
+      renderSearchResults();
+      showToast(newFav ? '♥ Added to Favorites' : 'Removed from Favorites');
+    });
+  });
+}
 
 /* ── Tabs ─────────────────────────────── */
 tabAll.addEventListener('click', () => {
