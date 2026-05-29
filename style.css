@@ -654,44 +654,43 @@ body:not(.playing) .playing-bars span { animation-play-state: paused; height: 7p
    Body gets .night-mode class via sleep.js
 ══════════════════════════════════════ */
 body.night-mode {
-  --accent:  #4a9eff;
-  --accent2: #82c4ff;
-  --bg:      #060810;
-  --bg2:     #0a0e1a;
-  --bg3:     #0f1525;
-  --border:  #1a2540;
-  --text2:   #7090bb;
-  --text3:   #3a5070;
+  --accent:  #2dd4a0;
+  --accent2: #6eead4;
+  --bg:      #060e0c;
+  --bg2:     #0a1612;
+  --bg3:     #0f1f1a;
+  --border:  #1a3530;
+  --text2:   #60a090;
+  --text3:   #3a6058;
 }
 
 body.night-mode .play-btn {
-  background: #4a9eff;
-  box-shadow: 0 4px 20px rgba(74,158,255,0.4);
+  background: #2dd4a0;
+  box-shadow: 0 4px 20px rgba(45,212,160,0.4);
 }
 
-body.night-mode .eq-bar:nth-child(odd)  { background: #4a9eff; }
-body.night-mode .eq-bar:nth-child(even) { background: #82c4ff; }
+body.night-mode .eq-bar:nth-child(odd)  { background: #2dd4a0; }
+body.night-mode .eq-bar:nth-child(even) { background: #6eead4; }
 
-body.night-mode .progress-fill,
-body.night-mode .progress-thumb { 
-  background: #4a9eff; 
-}
-body.night-mode .progress-thumb { 
-  box-shadow: 0 0 0 2px #4a9eff; 
+body.night-mode .progress-fill { background: #2dd4a0; }
+body.night-mode .progress-thumb {
+  background: #fff;
+  box-shadow: 0 0 0 2px #2dd4a0;
 }
 
 body.night-mode .sleep-badge {
-  background: rgba(74,158,255,0.12);
-  border-color: rgba(74,158,255,0.3);
+  background: rgba(45,212,160,0.12);
+  border-color: rgba(45,212,160,0.3);
 }
 body.night-mode .sleep-badge i,
-body.night-mode .sleep-badge span { color: #82c4ff; }
+body.night-mode .sleep-badge span { color: #6eead4; }
 
-body.night-mode .tab-btn.active { 
-  color: #4a9eff; 
-  background: rgba(74,158,255,0.12); 
+body.night-mode .tab-btn.active {
+  color: #2dd4a0;
+  background: rgba(45,212,160,0.12);
 }
 body.night-mode .fav-btn.on { color: var(--fav); }
+body.night-mode .icon-btn.sleep-on { color: #6eead4; }
 
 /* Smooth transition when mode switches */
 body { transition: background 1s ease; }
@@ -708,14 +707,18 @@ body.night-mode .eq-bar { transition: background 1s ease; }
   max-height: 0;
   overflow: hidden;
   opacity: 0;
-  transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
   flex-shrink: 0;
+  position: relative;
+  z-index: 10;
 }
 .search-wrap.open {
   max-height: 48px;
   opacity: 1;
   margin: 2px 20px 4px;
 }
+
+
 .search-wrap > i {
   color: var(--text3);
   font-size: 16px;
