@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, interactive-widget=resizes-visual" />
   <meta name="theme-color" content="#0d0d12" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -15,6 +15,20 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
+<!-- Search overlay — fixed on top of everything -->
+<div id="search-overlay" class="search-overlay" hidden>
+  <div class="search-overlay-bar">
+    <button id="search-close" class="icon-btn" aria-label="Close search">
+      <i class="ti ti-arrow-left"></i>
+    </button>
+    <input type="text" id="search-input" class="search-input" placeholder="Search songs or artists..." autocomplete="off" />
+    <button id="search-clear" class="icon-btn" aria-label="Clear">
+      <i class="ti ti-x"></i>
+    </button>
+  </div>
+  <div id="search-results" class="search-results"></div>
+</div>
 
 <div id="screen-player" class="screen active">
   <header class="top-bar">
@@ -44,12 +58,6 @@
   <div class="track-info">
     <div id="track-title" class="track-title">No track loaded</div>
     <div id="track-artist" class="track-artist">Add songs to get started</div>
-  </div>
-
-  <!-- Search bar -->
-  <div id="search-wrap" class="search-wrap">
-    <i class="ti ti-search" aria-hidden="true"></i>
-    <input type="text" id="search-input" class="search-input" placeholder="Search songs or artists..." autocomplete="off" />
   </div>
 
   <!-- Equalizer bars artwork -->
