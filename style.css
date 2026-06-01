@@ -212,7 +212,14 @@ body.playing .eq-bar {
   transition: color 0.2s, transform 0.1s;
 }
 .ctrl-btn:active { transform: scale(0.9); }
-.ctrl-btn.on { color: var(--accent); }
+.ctrl-btn.on {
+  color: var(--accent);
+  background: rgba(123,108,246,0.18);
+  box-shadow: 0 0 12px rgba(123,108,246,0.3);
+}
+.ctrl-btn.on i {
+  filter: drop-shadow(0 0 4px var(--accent));
+}
 .play-btn {
   width: 58px;
   height: 58px;
