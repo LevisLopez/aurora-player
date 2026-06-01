@@ -185,6 +185,31 @@ const Player = (() => {
     if (onQueueChange) onQueueChange();
   }
 
+  // ── Wake Lock — keeps screen/CPU alive ──
+  let wakeLock = null;
+
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      if (wakeLock) return; // already active
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch (_) {}
+  }
+
+  async function releaseWakeLock() {
+    if (!wakeLock) return;
+    try { await wakeLock.release(); } catch (_) {}
+    wakeLock = null;
+  }
+
+  // Re-acquire wake lock when page becomes visible again
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && isPlaying) {
+      await requestWakeLock();
+    }
+  });
+
   // ── Media Session ────────────────────────
   function updateMediaSession(track) {
     if (!('mediaSession' in navigator)) return;
@@ -212,13 +237,15 @@ const Player = (() => {
     document.body.classList.add('playing');
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     if (onPlayState) onPlayState(true);
+    requestWakeLock();
   });
   audio.addEventListener('pause', () => {
     isPlaying = false;
     document.body.classList.remove('playing');
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
     if (onPlayState) onPlayState(false);
-    saveSession(); // save position on pause
+    saveSession();
+    releaseWakeLock();
   });
   audio.addEventListener('ended', () => {
     saveSession();
