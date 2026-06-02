@@ -20,6 +20,7 @@
     <span class="app-name">AURORA</span>
     <div style="display:flex;align-items:center;gap:4px;">
       <button id="btn-sleep"      class="icon-btn" aria-label="Sleep timer"><i class="ti ti-moon"></i></button>
+      <button id="btn-lyrics"     class="icon-btn" aria-label="Lyrics"><i class="ti ti-microphone-2"></i></button>
       <button id="btn-search"     class="icon-btn" aria-label="Search"><i class="ti ti-search"></i></button>
       <button id="btn-open-admin" class="icon-btn" aria-label="Library"><i class="ti ti-settings"></i></button>
     </div>
@@ -83,6 +84,65 @@
       <i class="ti ti-heart-off"></i>
       <p>No favorites yet</p>
       <p class="empty-sub">Tap <i class="ti ti-heart"></i> on any song</p>
+    </div>
+  </div>
+</div>
+
+<!-- LYRICS SCREEN -->
+<div id="screen-lyrics" class="screen">
+  <div class="lyrics-header">
+    <button id="lyrics-close" class="icon-btn" aria-label="Close lyrics"><i class="ti ti-chevron-down"></i></button>
+    <div class="lyrics-header-info">
+      <div id="lyrics-track-title"  class="lyrics-track-name">—</div>
+      <div id="lyrics-track-artist" class="lyrics-track-artist">—</div>
+    </div>
+    <div style="display:flex;gap:4px;">
+      <button id="lyrics-upload-btn" class="icon-btn" aria-label="Upload .lrc file"><i class="ti ti-upload"></i></button>
+      <button id="lyrics-delete-btn" class="icon-btn" aria-label="Delete lyrics" style="display:none;"><i class="ti ti-trash"></i></button>
+    </div>
+  </div>
+
+  <input type="file" id="lrc-file-input" accept=".lrc,.txt" hidden />
+
+  <!-- Lyrics content -->
+  <div id="lyrics-content" class="lyrics-content">
+    <!-- States -->
+    <div id="lyrics-loading" class="lyrics-state" hidden>
+      <div class="lyrics-spinner"></div>
+      <p>Searching for lyrics...</p>
+    </div>
+    <div id="lyrics-not-found" class="lyrics-state" hidden>
+      <i class="ti ti-music-off" style="font-size:40px;opacity:0.3;margin-bottom:12px;"></i>
+      <p style="font-size:16px;font-weight:600;color:var(--text);">No lyrics found</p>
+      <p style="font-size:13px;color:var(--text3);margin-top:6px;">Upload a .lrc file to add lyrics</p>
+      <button id="lyrics-upload-btn2" class="lyrics-upload-btn">
+        <i class="ti ti-upload"></i> Upload .lrc file
+      </button>
+    </div>
+    <div id="lyrics-no-track" class="lyrics-state">
+      <i class="ti ti-music" style="font-size:40px;opacity:0.3;margin-bottom:12px;"></i>
+      <p style="font-size:14px;color:var(--text3);">Play a song to see lyrics</p>
+    </div>
+
+    <!-- Synced lines -->
+    <div id="lyrics-lines" class="lyrics-lines" hidden></div>
+  </div>
+
+  <!-- Mini player at bottom -->
+  <div class="lyrics-mini-player">
+    <div class="lyrics-progress-wrap" id="lyrics-progress-wrap">
+      <div class="lyrics-progress-track">
+        <div id="lyrics-progress-fill" class="lyrics-progress-fill"></div>
+      </div>
+    </div>
+    <div class="lyrics-mini-times">
+      <span id="lyrics-time-current">0:00</span>
+      <span id="lyrics-time-total">0:00</span>
+    </div>
+    <div class="lyrics-mini-controls">
+      <button id="lyrics-prev" class="ctrl-btn" aria-label="Previous"><i class="ti ti-player-skip-back"></i></button>
+      <button id="lyrics-play" class="play-btn" aria-label="Play/Pause"><i class="ti ti-player-play" id="lyrics-play-icon"></i></button>
+      <button id="lyrics-next" class="ctrl-btn" aria-label="Next"><i class="ti ti-player-skip-forward"></i></button>
     </div>
   </div>
 </div>
@@ -158,6 +218,7 @@
 <audio id="audio" preload="auto"></audio>
 
 <script src="db.js"></script>
+<script src="lyrics.js"></script>
 <script src="sleep.js"></script>
 <script src="player.js"></script>
 <script src="app.js"></script>
