@@ -1,7 +1,8 @@
 /* ═══════════════════════════════════════
-   db.js — IndexedDB storage layer v3
+   db.js — IndexedDB storage layer v4
+   Stores: tracks (audio+meta) + lyrics
 ═══════════════════════════════════════ */
-const DB_NAME = 'AuroraPlayerDB', DB_VERSION = 1, STORE_TRACKS = 'tracks';
+const DB_NAME = 'AuroraPlayerDB', DB_VERSION = 2, STORE_TRACKS = 'tracks', STORE_LYRICS = 'lyrics';
 let _db = null;
 
 function openDB() {
@@ -13,13 +14,16 @@ function openDB() {
       if (!db.objectStoreNames.contains(STORE_TRACKS)) {
         db.createObjectStore(STORE_TRACKS, { keyPath: 'id', autoIncrement: true });
       }
+      if (!db.objectStoreNames.contains(STORE_LYRICS)) {
+        db.createObjectStore(STORE_LYRICS, { keyPath: 'trackId' });
+      }
     };
     req.onsuccess = (e) => { _db = e.target.result; resolve(_db); };
     req.onerror   = (e) => reject(e.target.error);
   });
 }
 
-// Save a new track
+// ── Tracks ────────────────────────────────
 async function dbSaveTrack(data) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -29,28 +33,21 @@ async function dbSaveTrack(data) {
   });
 }
 
-// Get all tracks (metadata — includes favorite field, excludes heavy blob)
 async function dbGetAllTracks() {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const req = db.transaction(STORE_TRACKS, 'readonly').objectStore(STORE_TRACKS).getAll();
     req.onsuccess = (e) => {
-      // Return lightweight copies without blob for memory efficiency
-      const tracks = e.target.result.map(t => ({
-        id:       t.id,
-        title:    t.title,
-        artist:   t.artist,
-        duration: t.duration,
-        size:     t.size,
-        favorite: t.favorite === true, // normalize — undefined becomes false
-      }));
-      resolve(tracks);
+      resolve(e.target.result.map(t => ({
+        id: t.id, title: t.title, artist: t.artist,
+        duration: t.duration, size: t.size,
+        favorite: t.favorite === true,
+      })));
     };
     req.onerror = (e) => reject(e.target.error);
   });
 }
 
-// Get single track WITH blob (for playback)
 async function dbGetTrack(id) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -60,7 +57,6 @@ async function dbGetTrack(id) {
   });
 }
 
-// Update fields (reads full record with blob, merges, writes back)
 async function dbUpdateTrack(id, updates) {
   const full = await dbGetTrack(id);
   if (!full) return;
@@ -72,7 +68,6 @@ async function dbUpdateTrack(id, updates) {
   });
 }
 
-// Delete track
 async function dbDeleteTrack(id) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -82,7 +77,6 @@ async function dbDeleteTrack(id) {
   });
 }
 
-// Toggle favorite — single atomic operation
 async function dbToggleFavorite(id) {
   const full = await dbGetTrack(id);
   if (!full) return false;
@@ -91,19 +85,44 @@ async function dbToggleFavorite(id) {
   return newVal;
 }
 
-// Total storage used
 async function dbGetTotalSize() {
   const tracks = await dbGetAllTracks();
   return tracks.reduce((sum, t) => sum + (t.size || 0), 0);
 }
 
-// Check if a song already exists (by title + artist, case-insensitive)
 async function dbCheckDuplicate(title, artist) {
   const tracks = await dbGetAllTracks();
-  const t = title.toLowerCase().trim();
-  const a = artist.toLowerCase().trim();
-  return tracks.find(track =>
-    (track.title  || '').toLowerCase().trim() === t &&
-    (track.artist || '').toLowerCase().trim() === a
+  const t = title.toLowerCase().trim(), a = artist.toLowerCase().trim();
+  return tracks.find(tr =>
+    (tr.title  || '').toLowerCase().trim() === t &&
+    (tr.artist || '').toLowerCase().trim() === a
   ) || null;
+}
+
+// ── Lyrics ────────────────────────────────
+async function dbSaveLyrics(trackId, lrcText) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(STORE_LYRICS, 'readwrite').objectStore(STORE_LYRICS).put({ trackId, lrc: lrcText });
+    req.onsuccess = () => resolve();
+    req.onerror   = (e) => reject(e.target.error);
+  });
+}
+
+async function dbGetLyrics(trackId) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(STORE_LYRICS, 'readonly').objectStore(STORE_LYRICS).get(trackId);
+    req.onsuccess = (e) => resolve(e.target.result?.lrc || null);
+    req.onerror   = (e) => reject(e.target.error);
+  });
+}
+
+async function dbDeleteLyrics(trackId) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(STORE_LYRICS, 'readwrite').objectStore(STORE_LYRICS).delete(trackId);
+    req.onsuccess = () => resolve();
+    req.onerror   = (e) => reject(e.target.error);
+  });
 }
