@@ -64,11 +64,7 @@ btnOpenAdmin.addEventListener('click', () => { renderAdminList(); showScreen('ad
 btnBack.addEventListener('click',      () => showScreen('player'));
 
 /* ── Player callbacks ─────────────────── */
-Player.onTrackChange = (track) => {
-  trackTitle.textContent  = track ? (track.title  || 'Unknown') : 'No track loaded';
-  trackArtist.textContent = track ? (track.artist || 'Unknown') : 'Add songs to get started';
-  renderPlaylist();
-};
+// onTrackChange defined in lyrics section below
 Player.onPlayState = (playing) => {
   playIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
 };
@@ -384,3 +380,168 @@ function escHtml(s) {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
+
+/* ── Lyrics screen ────────────────────── */
+const screenLyrics      = $('screen-lyrics');
+const btnLyrics         = $('btn-lyrics');
+const lyricsClose       = $('lyrics-close');
+const lyricsLines       = $('lyrics-lines');
+const lyricsLoading     = $('lyrics-loading');
+const lyricsNotFound    = $('lyrics-not-found');
+const lyricsNoTrack     = $('lyrics-no-track');
+const lyricsTrackTitle  = $('lyrics-track-title');
+const lyricsTrackArtist = $('lyrics-track-artist');
+const lyricsPFill       = $('lyrics-progress-fill');
+const lyricsCurrent     = $('lyrics-time-current');
+const lyricsTotal       = $('lyrics-time-total');
+const lyricsPlayIcon    = $('lyrics-play-icon');
+const lyricsProgressWrap= $('lyrics-progress-wrap');
+const lyricsUploadBtn   = $('lyrics-upload-btn');
+const lyricsUploadBtn2  = $('lyrics-upload-btn2');
+const lyricsDeleteBtn   = $('lyrics-delete-btn');
+const lrcFileInput      = $('lrc-file-input');
+
+let lyricsVisible = false;
+
+function showLyricsScreen() {
+  screenLyrics.classList.add('active');
+  lyricsVisible = true;
+  btnLyrics.classList.add('lyrics-on');
+  const t = Player.currentTrack();
+  if (t) loadLyricsForTrack(t);
+}
+
+function hideLyricsScreen() {
+  screenLyrics.classList.remove('active');
+  lyricsVisible = false;
+  btnLyrics.classList.remove('lyrics-on');
+}
+
+btnLyrics.addEventListener('click', () => {
+  if (lyricsVisible) hideLyricsScreen();
+  else showLyricsScreen();
+});
+lyricsClose.addEventListener('click', hideLyricsScreen);
+
+// Mini player controls in lyrics screen
+$('lyrics-prev').addEventListener('click', () => Player.prev());
+$('lyrics-next').addEventListener('click', () => Player.next(true));
+$('lyrics-play').addEventListener('click', () => Player.togglePlay());
+
+lyricsProgressWrap.addEventListener('click', (e) => {
+  const rect = lyricsProgressWrap.getBoundingClientRect();
+  Player.seek(Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1));
+});
+
+// Update mini player progress from main player
+Player.onProgress = (ratio, current, total) => {
+  const pct = (ratio * 100).toFixed(2) + '%';
+  progressFill.style.width = pct;
+  progressThumb.style.left = pct;
+  timeCurrent.textContent  = Player.formatTime(current);
+  timeTotal.textContent    = Player.formatTime(total);
+  // Lyrics mini player
+  lyricsPFill.style.width  = pct;
+  lyricsCurrent.textContent = Player.formatTime(current);
+  lyricsTotal.textContent   = Player.formatTime(total);
+  // Sync lyrics
+  Lyrics.sync(current);
+};
+
+Player.onPlayState = (playing) => {
+  playIcon.className      = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+  lyricsPlayIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+};
+
+// Load lyrics when track changes
+Player.onTrackChange = (track) => {
+  trackTitle.textContent  = track ? (track.title  || 'Unknown') : 'No track loaded';
+  trackArtist.textContent = track ? (track.artist || 'Unknown') : 'Add songs to get started';
+  renderPlaylist();
+  Lyrics.clear();
+  if (lyricsVisible && track) loadLyricsForTrack(track);
+  else if (lyricsVisible) showLyricsState('no-track');
+};
+
+async function loadLyricsForTrack(track) {
+  lyricsTrackTitle.textContent  = track.title  || 'Unknown';
+  lyricsTrackArtist.textContent = track.artist || 'Unknown';
+  showLyricsState('loading');
+
+  const result = await Lyrics.load(track.id, track.title, track.artist);
+
+  if (result === 'found' || result === 'cached') {
+    renderLyricsLines();
+    lyricsDeleteBtn.style.display = '';
+  } else {
+    showLyricsState('not-found');
+    lyricsDeleteBtn.style.display = 'none';
+  }
+}
+
+function showLyricsState(state) {
+  lyricsLoading.hidden  = state !== 'loading';
+  lyricsNotFound.hidden = state !== 'not-found';
+  lyricsNoTrack.hidden  = state !== 'no-track';
+  lyricsLines.hidden    = state !== 'lines';
+}
+
+function renderLyricsLines() {
+  showLyricsState('lines');
+  lyricsLines.innerHTML = Lyrics.lines.map((line, i) =>
+    `<div class="lyric-line" data-idx="${i}">${escHtml(line.text)}</div>`
+  ).join('');
+
+  // Tap a line → seek to that time
+  lyricsLines.querySelectorAll('.lyric-line').forEach((el, i) => {
+    el.addEventListener('click', () => {
+      Player.seek(Lyrics.lines[i].time / document.getElementById('audio').duration);
+    });
+  });
+}
+
+// When active line changes — highlight + scroll
+Lyrics.onLine = (idx, lines) => {
+  if (!lyricsVisible) return;
+  const els = lyricsLines.querySelectorAll('.lyric-line');
+  els.forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+    el.classList.toggle('past',   i < idx);
+  });
+  if (idx >= 0 && els[idx]) {
+    els[idx].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+};
+
+// Upload .lrc file
+function handleLrcUpload() { lrcFileInput.click(); }
+lyricsUploadBtn.addEventListener('click',  handleLrcUpload);
+lyricsUploadBtn2.addEventListener('click', handleLrcUpload);
+
+lrcFileInput.addEventListener('change', async () => {
+  const file = lrcFileInput.files[0];
+  if (!file) return;
+  const text  = await file.text();
+  const track = Player.currentTrack();
+  if (!track) return;
+  const ok = await Lyrics.saveManual(track.id, text);
+  lrcFileInput.value = '';
+  if (ok) {
+    renderLyricsLines();
+    lyricsDeleteBtn.style.display = '';
+    showToast('Lyrics loaded!');
+  } else {
+    showToast('Could not parse .lrc file');
+  }
+});
+
+// Delete lyrics
+lyricsDeleteBtn.addEventListener('click', async () => {
+  const track = Player.currentTrack();
+  if (!track) return;
+  if (!confirm('Delete lyrics for this song?')) return;
+  await Lyrics.remove(track.id);
+  showLyricsState('not-found');
+  lyricsDeleteBtn.style.display = 'none';
+  showToast('Lyrics deleted');
+});
