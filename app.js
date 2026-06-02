@@ -266,11 +266,10 @@ btnAddSong.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', async () => {
   const files = Array.from(fileInput.files);
   if (!files.length) return;
-  const EXTS = /\.(mp3|mp4|m4a|ogg|oga|opus|wav|flac|aac|weba|webm|3gp|amr)$/i;
+  const EXTS = /\.(mp3|mp4|m4a|ogg|oga|opus|wav|flac|aac|weba|webm)$/i;
   let added = 0, skipped = 0, dups = [];
   for (const file of files) {
-    const mime = file.type || '';
-    const ok = mime.startsWith('audio/') || mime.startsWith('video/mp4') || mime.startsWith('video/m4v') || EXTS.test(file.name) || mime === '' || mime === 'application/octet-stream';
+    const ok = file.type.startsWith('audio/') || file.type.startsWith('video/mp4') || EXTS.test(file.name);
     if (!ok) { skipped++; continue; }
     const name = file.name.replace(/\.[^/.]+$/, '');
     let title = name, artist = 'Unknown';
@@ -545,70 +544,4 @@ lyricsDeleteBtn.addEventListener('click', async () => {
   showLyricsState('not-found');
   lyricsDeleteBtn.style.display = 'none';
   showToast('Lyrics deleted');
-});
-
-/* ── Lyrics UI ────────────────────────── */
-const btnLyrics      = $('btn-lyrics');
-const btnLyricsClose = $('btn-lyrics-close');
-const lrcFileInput   = $('lrc-file-input');
-const lyricsMiniPlay = $('lyrics-btn-play');
-const lyricsMiniPrev = $('lyrics-btn-prev');
-const lyricsMiniNext = $('lyrics-btn-next');
-const lyricsPlayIcon = $('lyrics-play-icon');
-const lyricsFill     = $('lyrics-progress-fill');
-const lyricsTitleEl  = $('lyrics-title');
-const lyricsArtistEl = $('lyrics-artist');
-
-btnLyrics.addEventListener('click',      () => Lyrics.toggle());
-btnLyricsClose.addEventListener('click', () => Lyrics.hide());
-
-// Mini player controls mirror main player
-lyricsMiniPlay.addEventListener('click', () => Player.togglePlay());
-lyricsMiniPrev.addEventListener('click', () => Player.prev());
-lyricsMiniNext.addEventListener('click', () => Player.next(true));
-
-// Sync mini player state
-const _origPlayState = Player.onPlayState;
-Player.onPlayState = (playing) => {
-  // Update main play icon
-  playIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
-  // Update lyrics mini play icon
-  if (lyricsPlayIcon) lyricsPlayIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
-};
-
-// Sync progress bar in lyrics screen
-const _origProgress = Player.onProgress;
-Player.onProgress = (ratio, current, total) => {
-  const pct = (ratio * 100).toFixed(2) + '%';
-  progressFill.style.width = pct;
-  progressThumb.style.left = pct;
-  timeCurrent.textContent  = Player.formatTime(current);
-  timeTotal.textContent    = Player.formatTime(total);
-  if (lyricsFill) lyricsFill.style.width = pct;
-};
-
-// When track changes, update lyrics screen title
-const _origTrackChange = Player.onTrackChange;
-Player.onTrackChange = (track) => {
-  trackTitle.textContent  = track ? (track.title  || 'Unknown') : 'No track loaded';
-  trackArtist.textContent = track ? (track.artist || 'Unknown') : 'Add songs to get started';
-  if (lyricsTitleEl)  lyricsTitleEl.textContent  = track?.title  || '—';
-  if (lyricsArtistEl) lyricsArtistEl.textContent = track?.artist || '—';
-  Lyrics.onTrackChange(track);
-  renderPlaylist();
-};
-
-// LRC file upload
-function openLrcUpload() { lrcFileInput.click(); }
-$('lyrics-upload-btn')?.addEventListener('click',  openLrcUpload);
-$('lyrics-upload-btn2')?.addEventListener('click', openLrcUpload);
-
-lrcFileInput.addEventListener('change', async () => {
-  const file = lrcFileInput.files[0];
-  if (!file) return;
-  const track = Player.currentTrack();
-  if (!track) { showToast('No track playing'); return; }
-  const ok = await Lyrics.uploadLRC(file, track.id);
-  lrcFileInput.value = '';
-  showToast(ok ? 'Lyrics loaded!' : 'Invalid .lrc file');
 });
