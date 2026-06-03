@@ -1,167 +1,42 @@
-/* ═══════════════════════════════════════
-   db.js — IndexedDB storage layer v4
-   Stores: tracks (audio+meta) + lyrics
-═══════════════════════════════════════ */
-const DB_NAME = 'AuroraPlayerDB', DB_VERSION = 2, STORE_TRACKS = 'tracks', STORE_LYRICS = 'lyrics';
-let _db = null;
-
-function openDB() {
-  return new Promise((resolve, reject) => {
-    if (_db) { resolve(_db); return; }
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(STORE_TRACKS)) {
-        db.createObjectStore(STORE_TRACKS, { keyPath: 'id', autoIncrement: true });
-      }
-      if (!db.objectStoreNames.contains(STORE_LYRICS)) {
-        db.createObjectStore(STORE_LYRICS, { keyPath: 'trackId' });
-      }
-    };
-    req.onsuccess = (e) => { _db = e.target.result; resolve(_db); };
-    req.onerror   = (e) => reject(e.target.error);
+/* db.js — IndexedDB v17 */
+const DB_NAME='AuroraPlayerDB',DB_VERSION=1,STORE='tracks';
+let _db=null;
+function openDB(){
+  return new Promise((res,rej)=>{
+    if(_db){res(_db);return;}
+    const r=indexedDB.open(DB_NAME,DB_VERSION);
+    r.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE,{keyPath:'id',autoIncrement:true});};
+    r.onsuccess=e=>{_db=e.target.result;res(_db);};
+    r.onerror=e=>rej(e.target.error);
   });
 }
-
-// ── Tracks ────────────────────────────────
-async function dbSaveTrack(data) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction(STORE_TRACKS, 'readwrite').objectStore(STORE_TRACKS).add(data);
-    req.onsuccess = (e) => resolve(e.target.result);
-    req.onerror   = (e) => reject(e.target.error);
+async function dbSaveTrack(data){const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE,'readwrite').objectStore(STORE).add(data);r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e.target.error);});}
+async function dbGetAllTracks(){
+  const db=await openDB();
+  return new Promise((res,rej)=>{
+    const r=db.transaction(STORE,'readonly').objectStore(STORE).getAll();
+    r.onsuccess=e=>res(e.target.result.map(t=>({id:t.id,title:t.title,artist:t.artist,duration:t.duration,size:t.size,favorite:t.favorite===true})));
+    r.onerror=e=>rej(e.target.error);
   });
 }
+async function dbGetTrack(id){const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE,'readonly').objectStore(STORE).get(id);r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e.target.error);});}
+async function dbUpdateTrack(id,updates){const full=await dbGetTrack(id);if(!full)return;const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE,'readwrite').objectStore(STORE).put({...full,...updates});r.onsuccess=()=>res();r.onerror=e=>rej(e.target.error);});}
+async function dbDeleteTrack(id){const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE,'readwrite').objectStore(STORE).delete(id);r.onsuccess=()=>res();r.onerror=e=>rej(e.target.error);});}
+async function dbToggleFavorite(id){const full=await dbGetTrack(id);if(!full)return false;const v=!(full.favorite===true);await dbUpdateTrack(id,{favorite:v});return v;}
+async function dbGetTotalSize(){const t=await dbGetAllTracks();return t.reduce((s,x)=>s+(x.size||0),0);}
+async function dbCheckDuplicate(title,artist){const t=await dbGetAllTracks();const tl=title.toLowerCase().trim(),al=artist.toLowerCase().trim();return t.find(x=>(x.title||'').toLowerCase().trim()===tl&&(x.artist||'').toLowerCase().trim()===al)||null;}
 
-async function dbGetAllTracks() {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction(STORE_TRACKS, 'readonly').objectStore(STORE_TRACKS).getAll();
-    req.onsuccess = (e) => {
-      resolve(e.target.result.map(t => ({
-        id: t.id, title: t.title, artist: t.artist,
-        duration: t.duration, size: t.size,
-        favorite: t.favorite === true,
-      })));
-    };
-    req.onerror = (e) => reject(e.target.error);
+/* Lyrics DB */
+let _ldb=null;
+function openLyricsDB(){
+  return new Promise((res,rej)=>{
+    if(_ldb){res(_ldb);return;}
+    const r=indexedDB.open('AuroraLyricsDB',1);
+    r.onupgradeneeded=e=>e.target.result.createObjectStore('lyrics',{keyPath:'trackId'});
+    r.onsuccess=e=>{_ldb=e.target.result;res(_ldb);};
+    r.onerror=e=>rej(e.target.error);
   });
 }
-
-async function dbGetTrack(id) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction(STORE_TRACKS, 'readonly').objectStore(STORE_TRACKS).get(id);
-    req.onsuccess = (e) => resolve(e.target.result);
-    req.onerror   = (e) => reject(e.target.error);
-  });
-}
-
-async function dbUpdateTrack(id, updates) {
-  const full = await dbGetTrack(id);
-  if (!full) return;
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction(STORE_TRACKS, 'readwrite').objectStore(STORE_TRACKS).put({ ...full, ...updates });
-    req.onsuccess = () => resolve();
-    req.onerror   = (e) => reject(e.target.error);
-  });
-}
-
-async function dbDeleteTrack(id) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction(STORE_TRACKS, 'readwrite').objectStore(STORE_TRACKS).delete(id);
-    req.onsuccess = () => resolve();
-    req.onerror   = (e) => reject(e.target.error);
-  });
-}
-
-async function dbToggleFavorite(id) {
-  const full = await dbGetTrack(id);
-  if (!full) return false;
-  const newVal = !(full.favorite === true);
-  await dbUpdateTrack(id, { favorite: newVal });
-  return newVal;
-}
-
-async function dbGetTotalSize() {
-  const tracks = await dbGetAllTracks();
-  return tracks.reduce((sum, t) => sum + (t.size || 0), 0);
-}
-
-async function dbCheckDuplicate(title, artist) {
-  const tracks = await dbGetAllTracks();
-  const t = title.toLowerCase().trim(), a = artist.toLowerCase().trim();
-  return tracks.find(tr =>
-    (tr.title  || '').toLowerCase().trim() === t &&
-    (tr.artist || '').toLowerCase().trim() === a
-  ) || null;
-}
-
-// ── Lyrics ────────────────────────────────
-async function dbSaveLyrics(trackId, lrcText) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction(STORE_LYRICS, 'readwrite').objectStore(STORE_LYRICS).put({ trackId, lrc: lrcText });
-    req.onsuccess = () => resolve();
-    req.onerror   = (e) => reject(e.target.error);
-  });
-}
-
-async function dbGetLyrics(trackId) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction(STORE_LYRICS, 'readonly').objectStore(STORE_LYRICS).get(trackId);
-    req.onsuccess = (e) => resolve(e.target.result?.lrc || null);
-    req.onerror   = (e) => reject(e.target.error);
-  });
-}
-
-async function dbDeleteLyrics(trackId) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction(STORE_LYRICS, 'readwrite').objectStore(STORE_LYRICS).delete(trackId);
-    req.onsuccess = () => resolve();
-    req.onerror   = (e) => reject(e.target.error);
-  });
-}
-
-// ── Lyrics storage (separate store) ──────────
-async function dbGetLyricsDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open('AuroraLyricsDB', 1);
-    req.onupgradeneeded = e => {
-      e.target.result.createObjectStore('lyrics', { keyPath: 'trackId' });
-    };
-    req.onsuccess  = e => resolve(e.target.result);
-    req.onerror    = e => reject(e.target.error);
-  });
-}
-
-async function dbSaveLyrics(trackId, lrcText) {
-  const db = await dbGetLyricsDB();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction('lyrics','readwrite').objectStore('lyrics').put({ trackId, lrcText });
-    req.onsuccess = () => resolve();
-    req.onerror   = e => reject(e.target.error);
-  });
-}
-
-async function dbGetLyrics(trackId) {
-  const db = await dbGetLyricsDB();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction('lyrics','readonly').objectStore('lyrics').get(trackId);
-    req.onsuccess = e => resolve(e.target.result?.lrcText || null);
-    req.onerror   = e => reject(e.target.error);
-  });
-}
-
-async function dbDeleteLyrics(trackId) {
-  const db = await dbGetLyricsDB();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction('lyrics','readwrite').objectStore('lyrics').delete(trackId);
-    req.onsuccess = () => resolve();
-    req.onerror   = e => reject(e.target.error);
-  });
-}
+async function dbSaveLyrics(trackId,lrcText){const db=await openLyricsDB();return new Promise((res,rej)=>{const r=db.transaction('lyrics','readwrite').objectStore('lyrics').put({trackId,lrcText});r.onsuccess=()=>res();r.onerror=e=>rej(e.target.error);});}
+async function dbGetLyrics(trackId){const db=await openLyricsDB();return new Promise((res,rej)=>{const r=db.transaction('lyrics','readonly').objectStore('lyrics').get(trackId);r.onsuccess=e=>res(e.target.result?.lrcText||null);r.onerror=e=>rej(e.target.error);});}
+async function dbDeleteLyrics(trackId){const db=await openLyricsDB();return new Promise((res,rej)=>{const r=db.transaction('lyrics','readwrite').objectStore('lyrics').delete(trackId);r.onsuccess=()=>res();r.onerror=e=>rej(e.target.error);});}
