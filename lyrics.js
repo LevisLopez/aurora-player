@@ -1,203 +1,151 @@
-/* ═══════════════════════════════════════
-   lyrics.js — Karaoke system
-   - Auto-fetch from lrclib.net
-   - Manual .lrc upload fallback
-   - Stored in IndexedDB
-   - Spotify-style display replacing EQ bars
-═══════════════════════════════════════ */
-
+/* lyrics.js — Karaoke engine v17 */
 const Lyrics = (() => {
-
-  let lines       = [];   // [{time, text}]
-  let currentLine = -1;
-  let visible     = false;
-  let trackId     = null;
-  let tickerId    = null;
-
+  let lines=[], currentLine=-1, trackId=null, lyricsOn=false, fullscreenOn=false;
   const audio = document.getElementById('audio');
 
-  // ── Parse .lrc format ────────────────────
-  function parseLRC(text) {
-    const result = [];
-    const lineRe = /\[(\d{1,3}):(\d{2})\.(\d{1,3})\](.*)/;
-    text.split('\n').forEach(row => {
-      const m = row.match(lineRe);
-      if (!m) return;
-      const mins = parseInt(m[1]);
-      const secs = parseInt(m[2]);
-      const ms   = parseInt(m[3].padEnd(3,'0').slice(0,3));
-      const time = mins * 60 + secs + ms / 1000;
-      const text = m[4].trim();
-      if (text) result.push({ time, text });
+  function parseLRC(text){
+    const re=/\[(\d{1,3}):(\d{2})\.(\d{1,3})\](.*)/;
+    return text.split('\n').reduce((arr,row)=>{
+      const m=row.match(re); if(!m)return arr;
+      const t=parseInt(m[1])*60+parseInt(m[2])+parseInt(m[3].padEnd(3,'0').slice(0,3))/1000;
+      const s=m[4].trim(); if(s)arr.push({time:t,text:s});
+      return arr;
+    },[]).sort((a,b)=>a.time-b.time);
+  }
+
+  async function fetchLRC(title,artist){
+    try{
+      const q=encodeURIComponent(`${title} ${artist}`);
+      const r=await fetch(`https://lrclib.net/api/search?q=${q}`);
+      if(!r.ok)return null;
+      const d=await r.json(); if(!d.length)return null;
+      const m=d.find(x=>x.syncedLyrics&&(x.trackName||'').toLowerCase().includes((title||'').toLowerCase().slice(0,4)))||d.find(x=>x.syncedLyrics)||null;
+      return m?.syncedLyrics||null;
+    }catch{return null;}
+  }
+
+  async function loadLyrics(track){
+    if(!track){setStatus('No track playing');lines=[];return;}
+    if(trackId===track.id&&lines.length){renderInline();return;}
+    trackId=track.id; lines=[];
+    const saved=await dbGetLyrics(track.id);
+    if(saved){lines=parseLRC(saved);renderInline();if(fullscreenOn)renderFullscreen();return;}
+    setStatus('Searching lyrics...');
+    const lrc=await fetchLRC(track.title||'',track.artist||'');
+    if(lrc){await dbSaveLyrics(track.id,lrc);lines=parseLRC(lrc);renderInline();if(fullscreenOn)renderFullscreen();}
+    else showNotFound();
+  }
+
+  function setStatus(msg){
+    document.getElementById('lyrics-status').textContent=msg;
+    document.getElementById('lyrics-status').style.display='block';
+    document.getElementById('lyrics-lines').innerHTML='';
+    const nf=document.getElementById('lyrics-nofound');if(nf)nf.hidden=true;
+  }
+
+  function showNotFound(){
+    document.getElementById('lyrics-status').style.display='none';
+    document.getElementById('lyrics-lines').innerHTML='';
+    const nf=document.getElementById('lyrics-nofound');if(nf)nf.hidden=false;
+  }
+
+  function renderInline(){
+    document.getElementById('lyrics-status').style.display='none';
+    const nf=document.getElementById('lyrics-nofound');if(nf)nf.hidden=true;
+    const el=document.getElementById('lyrics-lines');
+    el.innerHTML=lines.map((l,i)=>`<div class="lyric-line-inline" data-i="${i}">${esc(l.text)}</div>`).join('');
+    document.getElementById('lyrics-expand-btn').hidden=false;
+    currentLine=-1; tick();
+  }
+
+  function renderFullscreen(){
+    const el=document.getElementById('lf-lines');
+    if(!el)return;
+    el.innerHTML=lines.map((l,i)=>`<div class="lyric-line" data-i="${i}">${esc(l.text)}</div>`).join('');
+    el.querySelectorAll('.lyric-line').forEach((div,i)=>{
+      div.addEventListener('click',()=>{audio.currentTime=lines[i].time;if(audio.paused)audio.play().catch(()=>{});});
     });
-    return result.sort((a,b) => a.time - b.time);
+    currentLine=-1; tickFull();
   }
 
-  // ── Fetch from lrclib.net ─────────────────
-  async function fetchFromAPI(title, artist) {
-    try {
-      const q   = encodeURIComponent(`${title} ${artist}`);
-      const url = `https://lrclib.net/api/search?q=${q}`;
-      const res = await fetch(url);
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (!data.length) return null;
-      // Try to find best match
-      const match = data.find(d =>
-        d.syncedLyrics &&
-        d.trackName?.toLowerCase().includes(title.toLowerCase().slice(0,5))
-      ) || data.find(d => d.syncedLyrics) || null;
-      return match?.syncedLyrics || null;
-    } catch { return null; }
-  }
-
-  // ── Load lyrics for current track ─────────
-  async function loadForTrack(track) {
-    if (!track) { lines = []; return; }
-    if (trackId === track.id && lines.length) return; // already loaded
-    trackId = track.id;
-    lines   = [];
-
-    // 1. Check IndexedDB first
-    const saved = await dbGetLyrics(track.id);
-    if (saved) { lines = parseLRC(saved); renderLines(); return; }
-
-    // 2. Try API
-    showLyricsStatus('Searching lyrics...');
-    const lrc = await fetchFromAPI(track.title || '', track.artist || '');
-    if (lrc) {
-      await dbSaveLyrics(track.id, lrc);
-      lines = parseLRC(lrc);
-      renderLines();
-      return;
-    }
-
-    // 3. Not found
-    showLyricsStatus('not-found');
-  }
-
-  // ── Tick — highlight current line ─────────
-  function tick() {
-    if (!lines.length || !visible) return;
-    const t = audio.currentTime;
-    let idx = -1;
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].time <= t) idx = i;
-      else break;
-    }
-    if (idx === currentLine) return;
-    currentLine = idx;
-    updateHighlight();
-  }
-
-  function updateHighlight() {
-    const els = document.querySelectorAll('.lyric-line');
-    els.forEach((el, i) => {
-      const active = i === currentLine;
-      const past   = i < currentLine;
-      el.classList.toggle('active', active);
-      el.classList.toggle('past',   past && !active);
+  function tick(){
+    if(!lyricsOn||!lines.length)return;
+    const t=audio.currentTime;
+    let idx=-1;
+    for(let i=0;i<lines.length;i++){if(lines[i].time<=t)idx=i;else break;}
+    if(idx===currentLine)return;
+    currentLine=idx;
+    document.querySelectorAll('.lyric-line-inline').forEach((el,i)=>{
+      el.classList.toggle('active',i===idx);
+      el.classList.toggle('past',i<idx);
     });
-    // scroll active line into view
-    const activeEl = document.querySelector('.lyric-line.active');
-    if (activeEl) {
-      activeEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
   }
 
-  // ── Render lines into lyrics container ────
-  function renderLines() {
-    const container = document.getElementById('lyrics-container');
-    if (!container) return;
-    document.getElementById('lyrics-status').hidden  = true;
-    document.getElementById('lyrics-lines').hidden   = false;
-    document.getElementById('lyrics-nofound').hidden = true;
-
-    const linesEl = document.getElementById('lyrics-lines');
-    linesEl.innerHTML = lines.map((l, i) =>
-      `<div class="lyric-line" data-idx="${i}">${escHtmlL(l.text)}</div>`
-    ).join('');
-
-    // Click line to seek
-    linesEl.querySelectorAll('.lyric-line').forEach((el, i) => {
-      el.addEventListener('click', () => {
-        audio.currentTime = lines[i].time;
-        if (audio.paused) audio.play().catch(()=>{});
-      });
+  function tickFull(){
+    if(!fullscreenOn||!lines.length)return;
+    const t=audio.currentTime;
+    let idx=-1;
+    for(let i=0;i<lines.length;i++){if(lines[i].time<=t)idx=i;else break;}
+    document.querySelectorAll('.lyric-line').forEach((el,i)=>{
+      el.classList.toggle('active',i===idx);
+      el.classList.toggle('past',i<idx);
     });
-
-    currentLine = -1;
-    tick();
+    const a=document.querySelector('.lyric-line.active');
+    if(a)a.scrollIntoView({block:'center',behavior:'smooth'});
   }
 
-  function showLyricsStatus(state) {
-    const status  = document.getElementById('lyrics-status');
-    const nofound = document.getElementById('lyrics-nofound');
-    const linesEl = document.getElementById('lyrics-lines');
-    if (!status) return;
-    if (state === 'not-found') {
-      status.hidden  = true;
-      linesEl.hidden = true;
-      nofound.hidden = false;
-    } else {
-      status.textContent = state;
-      status.hidden  = false;
-      linesEl.hidden = true;
-      nofound.hidden = true;
+  audio.addEventListener('timeupdate',()=>{tick();tickFull();});
+
+  function toggleInline(){
+    lyricsOn=!lyricsOn;
+    document.getElementById('eq-artwork').hidden=lyricsOn;
+    document.getElementById('lyrics-area').hidden=!lyricsOn;
+    document.getElementById('btn-toggle-lyrics').classList.toggle('on',lyricsOn);
+    if(lyricsOn){
+      const track=window.Player?.currentTrack();
+      if(track)loadLyrics(track);
     }
   }
 
-  // ── Show / hide lyrics screen ──────────────
-  async function show() {
-    visible = true;
-    document.getElementById('lyrics-screen').hidden = false;
-    document.getElementById('btn-lyrics').classList.add('on');
-    const track = window.Player?.currentTrack();
-    if (track) await loadForTrack(track);
-    else showLyricsStatus('No track playing');
-    clearInterval(tickerId);
-    tickerId = setInterval(tick, 200);
+  function openFullscreen(){
+    fullscreenOn=true;
+    const fs=document.getElementById('lyrics-fullscreen');
+    fs.hidden=false;
+    const track=window.Player?.currentTrack();
+    if(track){
+      document.getElementById('lf-title').textContent=track.title||'—';
+      document.getElementById('lf-artist').textContent=track.artist||'—';
+    }
+    if(lines.length)renderFullscreen();
+    else if(track)loadLyrics(track);
   }
 
-  function hide() {
-    visible = false;
-    document.getElementById('lyrics-screen').hidden = true;
-    document.getElementById('btn-lyrics').classList.remove('on');
-    clearInterval(tickerId);
+  function closeFullscreen(){
+    fullscreenOn=false;
+    document.getElementById('lyrics-fullscreen').hidden=true;
   }
 
-  function toggle() {
-    visible ? hide() : show();
+  function onTrackChange(track){
+    currentLine=-1; lines=[]; trackId=null;
+    if(lyricsOn)loadLyrics(track);
+    if(fullscreenOn){
+      document.getElementById('lf-title').textContent=track?.title||'—';
+      document.getElementById('lf-artist').textContent=track?.artist||'—';
+      if(track)loadLyrics(track);
+    }
   }
 
-  // ── Manual LRC upload ─────────────────────
-  async function uploadLRC(file, trackId) {
-    const text = await file.text();
-    const parsed = parseLRC(text);
-    if (!parsed.length) { return false; }
-    await dbSaveLyrics(trackId, text);
-    lines = parsed;
-    renderLines();
+  async function uploadLRC(file,tId){
+    const text=await file.text();
+    const p=parseLRC(text);
+    if(!p.length)return false;
+    await dbSaveLyrics(tId,text);
+    lines=p; renderInline();
+    if(fullscreenOn)renderFullscreen();
     return true;
   }
 
-  // ── When track changes, reload lyrics ──────
-  function onTrackChange(track) {
-    currentLine = -1;
-    lines = [];
-    trackId = null;
-    if (visible && track) loadForTrack(track);
-    else if (visible) showLyricsStatus('No track playing');
-  }
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-  function escHtmlL(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-
-  // Auto-tick on timeupdate for smoother sync
-  audio.addEventListener('timeupdate', tick);
-
-  return { show, hide, toggle, onTrackChange, uploadLRC,
-           get visible() { return visible; } };
-
+  return{toggleInline,openFullscreen,closeFullscreen,onTrackChange,uploadLRC};
 })();
