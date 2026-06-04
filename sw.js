@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aurora-v29';
+const CACHE_NAME = 'aurora-v30';
 const APP_SHELL = [
   './', './index.html', './style.css',
   './db.js', './player.js', './app.js', './sleep.js',
