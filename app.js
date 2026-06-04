@@ -381,180 +381,142 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 
-/* ── Lyrics inline + fullscreen  v28 ─── */
-const btnLyrics       = $('btn-lyrics');
-const eqArtwork       = $('eq-artwork');
-const inlineLyrics    = $('inline-lyrics');
-const inlineStatus    = $('inline-status');
-const inlineLines     = $('inline-lines');
-const inlineNofound   = $('inline-nofound');
-const btnExpandLyrics = $('btn-expand-lyrics');
-const inlineUploadBtn = $('inline-upload-btn');
-const lyricsFullscreen= $('lyrics-fullscreen');
-const lfsClose        = $('lfs-close');
-const lfsLines        = $('lfs-lines');
-const lfsFill         = $('lfs-fill');
-const lfsUploadBtn    = $('lfs-upload-btn');
-const lrcFileInput    = $('lrc-file-input');
+/* ── Lyrics screen ────────────────────── */
+const screenLyrics      = $('screen-lyrics');
+const btnLyrics         = $('btn-lyrics');
+const lyricsClose       = $('lyrics-close');
+const lyricsLines       = $('lyrics-lines');
+const lyricsLoading     = $('lyrics-loading');
+const lyricsNotFound    = $('lyrics-not-found');
+const lyricsNoTrack     = $('lyrics-no-track');
+const lyricsTrackTitle  = $('lyrics-track-title');
+const lyricsTrackArtist = $('lyrics-track-artist');
+const lyricsPFill       = $('lyrics-progress-fill');
+const lyricsCurrent     = $('lyrics-time-current');
+const lyricsTotal       = $('lyrics-time-total');
+const lyricsPlayIcon    = $('lyrics-play-icon');
+const lyricsProgressWrap= $('lyrics-progress-wrap');
+const lyricsUploadBtn   = $('lyrics-upload-btn');
+const lyricsUploadBtn2  = $('lyrics-upload-btn2');
+const lyricsDeleteBtn   = $('lyrics-delete-btn');
+const lrcFileInput      = $('lrc-file-input');
 
-let lyricsMode = false;      // inline lyrics on/off
-let lyricsFullscreenOn = false;
+let lyricsVisible = false;
 
-/* ── Toggle inline lyrics ── */
+function showLyricsScreen() {
+  screenLyrics.classList.add('active');
+  lyricsVisible = true;
+  btnLyrics.classList.add('lyrics-on');
+  const t = Player.currentTrack();
+  if (t) loadLyricsForTrack(t);
+}
+
+function hideLyricsScreen() {
+  screenLyrics.classList.remove('active');
+  lyricsVisible = false;
+  btnLyrics.classList.remove('lyrics-on');
+}
+
 btnLyrics.addEventListener('click', () => {
-  lyricsMode = !lyricsMode;
-  btnLyrics.classList.toggle('on', lyricsMode);
-  eqArtwork.hidden    = lyricsMode;
-  inlineLyrics.hidden = !lyricsMode;
-  if (lyricsMode) {
-    const t = Player.currentTrack();
-    if (t) loadLyricsInline(t);
-    else { inlineStatus.textContent = 'Play a song to see lyrics'; inlineStatus.style.display = 'block'; }
-  }
+  if (lyricsVisible) hideLyricsScreen();
+  else showLyricsScreen();
+});
+lyricsClose.addEventListener('click', hideLyricsScreen);
+
+// Mini player controls in lyrics screen
+$('lyrics-prev').addEventListener('click', () => Player.prev());
+$('lyrics-next').addEventListener('click', () => Player.next(true));
+$('lyrics-play').addEventListener('click', () => Player.togglePlay());
+
+lyricsProgressWrap.addEventListener('click', (e) => {
+  const rect = lyricsProgressWrap.getBoundingClientRect();
+  Player.seek(Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1));
 });
 
-/* ── Load lyrics and show inline ── */
-async function loadLyricsInline(track) {
-  inlineStatus.textContent = 'Searching...';
-  inlineStatus.style.display = 'block';
-  inlineLines.innerHTML = '';
-  inlineNofound.hidden = true;
-  btnExpandLyrics.hidden = true;
-
-  const result = await Lyrics.load(track.id, track.title, track.artist);
-
-  if (result === 'found' || result === 'cached') {
-    inlineStatus.style.display = 'none';
-    renderInlineLines();
-    btnExpandLyrics.hidden = false;
-    if (lyricsFullscreenOn) renderFullscreenLines();
-  } else {
-    inlineStatus.style.display = 'none';
-    inlineNofound.hidden = false;
-  }
-}
-
-/* ── Render 3 lines around active in the small area ── */
-function renderInlineLines() {
-  inlineLines.innerHTML = '';
-  const lines = Lyrics.lines;
-  if (!lines.length) return;
-  // Show lines around current active
-  updateInlineDisplay();
-}
-
-function updateInlineDisplay() {
-  const lines = Lyrics.lines;
-  const idx   = Lyrics.activeIdx;
-  if (!lines.length) return;
-
-  // Show prev, active, next (3 lines max in small area)
-  const show = [];
-  if (idx > 0)              show.push({ line: lines[idx-1], cls: 'near' });
-  if (idx >= 0)             show.push({ line: lines[idx],   cls: 'active' });
-  else if (lines.length)    show.push({ line: lines[0],     cls: 'near' });
-  if (idx < lines.length-1) show.push({ line: lines[idx+1], cls: 'near' });
-
-  inlineLines.innerHTML = show.map(({line, cls}) =>
-    `<div class="inline-line ${cls}">${escHtml(line.text)}</div>`
-  ).join('');
-}
-
-/* ── Fullscreen lyrics ── */
-btnExpandLyrics.addEventListener('click', openFullscreen);
-lfsClose.addEventListener('click', closeFullscreen);
-
-function openFullscreen() {
-  lyricsFullscreenOn = true;
-  lyricsFullscreen.hidden = false;
-  const t = Player.currentTrack();
-  if (t) {
-    $('lfs-title').textContent  = t.title  || '—';
-    $('lfs-artist').textContent = t.artist || '—';
-  }
-  renderFullscreenLines();
-}
-
-function closeFullscreen() {
-  lyricsFullscreenOn = false;
-  lyricsFullscreen.hidden = true;
-}
-
-function renderFullscreenLines() {
-  const lines = Lyrics.lines;
-  lfsLines.innerHTML = lines.map((l, i) =>
-    `<div class="lfs-line" data-i="${i}">${escHtml(l.text)}</div>`
-  ).join('');
-  lfsLines.querySelectorAll('.lfs-line').forEach((el, i) => {
-    el.addEventListener('click', () => {
-      const audio = document.getElementById('audio');
-      if (audio.duration) audio.currentTime = lines[i].time;
-      if (audio.paused) audio.play().catch(()=>{});
-    });
-  });
-  updateFullscreenHighlight();
-}
-
-function updateFullscreenHighlight() {
-  const idx = Lyrics.activeIdx;
-  const els = lfsLines.querySelectorAll('.lfs-line');
-  els.forEach((el, i) => {
-    el.classList.toggle('active', i === idx);
-    el.classList.toggle('past',   i < idx && i !== idx);
-  });
-  const a = lfsLines.querySelector('.lfs-line.active');
-  if (a) a.scrollIntoView({ block: 'center', behavior: 'smooth' });
-}
-
-/* ── Fullscreen mini player controls ── */
-$('lfs-prev').addEventListener('click', () => Player.prev());
-$('lfs-next').addEventListener('click', () => Player.next(true));
-$('lfs-play').addEventListener('click', () => Player.togglePlay());
-
-/* ── Progress ── */
+// Update mini player progress from main player
 Player.onProgress = (ratio, current, total) => {
   const pct = (ratio * 100).toFixed(2) + '%';
   progressFill.style.width = pct;
   progressThumb.style.left = pct;
   timeCurrent.textContent  = Player.formatTime(current);
   timeTotal.textContent    = Player.formatTime(total);
-  if (lfsFill) lfsFill.style.width = pct;
+  // Lyrics mini player
+  lyricsPFill.style.width  = pct;
+  lyricsCurrent.textContent = Player.formatTime(current);
+  lyricsTotal.textContent   = Player.formatTime(total);
+  // Sync lyrics
   Lyrics.sync(current);
 };
 
 Player.onPlayState = (playing) => {
-  playIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
-  const lfsPI = $('lfs-play-icon');
-  if (lfsPI) lfsPI.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+  playIcon.className      = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+  lyricsPlayIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
 };
 
-/* ── Track change ── */
+// Load lyrics when track changes
 Player.onTrackChange = (track) => {
   trackTitle.textContent  = track ? (track.title  || 'Unknown') : 'No track loaded';
   trackArtist.textContent = track ? (track.artist || 'Unknown') : 'Add songs to get started';
   renderPlaylist();
   Lyrics.clear();
-  inlineLines.innerHTML = '';
-  inlineNofound.hidden = true;
-  btnExpandLyrics.hidden = true;
-  if (lyricsMode && track)         loadLyricsInline(track);
-  if (lyricsFullscreenOn && track) {
-    $('lfs-title').textContent  = track.title  || '—';
-    $('lfs-artist').textContent = track.artist || '—';
-    loadLyricsInline(track);
+  if (lyricsVisible && track) loadLyricsForTrack(track);
+  else if (lyricsVisible) showLyricsState('no-track');
+};
+
+async function loadLyricsForTrack(track) {
+  lyricsTrackTitle.textContent  = track.title  || 'Unknown';
+  lyricsTrackArtist.textContent = track.artist || 'Unknown';
+  showLyricsState('loading');
+
+  const result = await Lyrics.load(track.id, track.title, track.artist);
+
+  if (result === 'found' || result === 'cached') {
+    renderLyricsLines();
+    lyricsDeleteBtn.style.display = '';
+  } else {
+    showLyricsState('not-found');
+    lyricsDeleteBtn.style.display = 'none';
+  }
+}
+
+function showLyricsState(state) {
+  lyricsLoading.hidden  = state !== 'loading';
+  lyricsNotFound.hidden = state !== 'not-found';
+  lyricsNoTrack.hidden  = state !== 'no-track';
+  lyricsLines.hidden    = state !== 'lines';
+}
+
+function renderLyricsLines() {
+  showLyricsState('lines');
+  lyricsLines.innerHTML = Lyrics.lines.map((line, i) =>
+    `<div class="lyric-line" data-idx="${i}">${escHtml(line.text)}</div>`
+  ).join('');
+
+  // Tap a line → seek to that time
+  lyricsLines.querySelectorAll('.lyric-line').forEach((el, i) => {
+    el.addEventListener('click', () => {
+      Player.seek(Lyrics.lines[i].time / document.getElementById('audio').duration);
+    });
+  });
+}
+
+// When active line changes — highlight + scroll
+Lyrics.onLine = (idx, lines) => {
+  if (!lyricsVisible) return;
+  const els = lyricsLines.querySelectorAll('.lyric-line');
+  els.forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+    el.classList.toggle('past',   i < idx);
+  });
+  if (idx >= 0 && els[idx]) {
+    els[idx].scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 };
 
-/* ── Lyrics sync callback ── */
-Lyrics.onLine = (idx, lines) => {
-  if (lyricsMode)         updateInlineDisplay();
-  if (lyricsFullscreenOn) updateFullscreenHighlight();
-};
-
-/* ── Upload .lrc ── */
+// Upload .lrc file
 function handleLrcUpload() { lrcFileInput.click(); }
-inlineUploadBtn.addEventListener('click', handleLrcUpload);
-if (lfsUploadBtn) lfsUploadBtn.addEventListener('click', handleLrcUpload);
+lyricsUploadBtn.addEventListener('click',  handleLrcUpload);
+lyricsUploadBtn2.addEventListener('click', handleLrcUpload);
 
 lrcFileInput.addEventListener('change', async () => {
   const file = lrcFileInput.files[0];
@@ -565,13 +527,21 @@ lrcFileInput.addEventListener('change', async () => {
   const ok = await Lyrics.saveManual(track.id, text);
   lrcFileInput.value = '';
   if (ok) {
-    inlineNofound.hidden = true;
-    inlineStatus.style.display = 'none';
-    renderInlineLines();
-    btnExpandLyrics.hidden = false;
-    if (lyricsFullscreenOn) renderFullscreenLines();
+    renderLyricsLines();
+    lyricsDeleteBtn.style.display = '';
     showToast('Lyrics loaded!');
   } else {
     showToast('Could not parse .lrc file');
   }
+});
+
+// Delete lyrics
+lyricsDeleteBtn.addEventListener('click', async () => {
+  const track = Player.currentTrack();
+  if (!track) return;
+  if (!confirm('Delete lyrics for this song?')) return;
+  await Lyrics.remove(track.id);
+  showLyricsState('not-found');
+  lyricsDeleteBtn.style.display = 'none';
+  showToast('Lyrics deleted');
 });
