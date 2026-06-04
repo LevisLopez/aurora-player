@@ -957,3 +957,260 @@ body.night-mode .eq-bar { transition: background 1s ease; }
 
 /* Mic icon active when lyrics visible */
 .icon-btn.lyrics-on { color: var(--accent); }
+
+/* ══ VISUAL WRAP + INLINE LYRICS  v28 ══ */
+.visual-wrap {
+  position: relative;
+  flex-shrink: 0;
+  margin: 10px 0 6px;
+}
+.visual-wrap .eq-artwork {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 5px;
+  height: 100px;
+  padding: 0 20px;
+}
+.inline-lyrics {
+  height: 100px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 20px;
+  position: relative;
+  mask-image: linear-gradient(transparent 0%, black 18%, black 82%, transparent 100%);
+  -webkit-mask-image: linear-gradient(transparent 0%, black 18%, black 82%, transparent 100%);
+}
+.inline-lyrics[hidden] { display: none; }
+.inline-status {
+  font-size: 12px;
+  color: var(--text3);
+  font-style: italic;
+  text-align: center;
+}
+.inline-lines {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.inline-line {
+  font-size: 13px;
+  color: rgba(255,255,255,0.18);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  padding: 3px 0;
+  line-height: 1.4;
+  transition: color 0.3s, font-size 0.3s;
+}
+.inline-line.active {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(123,108,246,0.7);
+}
+.inline-line.near {
+  color: rgba(255,255,255,0.35);
+  font-size: 13px;
+}
+.inline-nofound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+.inline-nofound[hidden] { display: none; }
+.inline-nofound p { font-size: 12px; color: var(--text3); }
+.inline-upload-btn {
+  background: var(--bg3);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  padding: 5px 14px;
+  color: var(--accent2);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.btn-full-lyrics {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  background: rgba(123,108,246,0.15);
+  border: 0.5px solid rgba(123,108,246,0.3);
+  border-radius: 16px;
+  padding: 3px 10px;
+  color: var(--accent2);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-full-lyrics[hidden] { display: none; }
+
+/* ══ LYRICS FULLSCREEN ══ */
+.lyrics-fullscreen {
+  position: fixed;
+  inset: 0;
+  background: #09090f;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.lyrics-fullscreen[hidden] { display: none; }
+.lf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 52px 20px 12px;
+  flex-shrink: 0;
+}
+.lf-title  { font-family: var(--font-head); font-size: 16px; font-weight: 700; color: var(--text); }
+.lf-artist { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.lf-lines {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 28px;
+  display: flex;
+  flex-direction: column;
+  mask-image: linear-gradient(transparent 0%, black 8%, black 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(transparent 0%, black 8%, black 88%, transparent 100%);
+}
+.lf-lines::-webkit-scrollbar { display: none; }
+.lf-line {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.18);
+  padding: 8px 0;
+  cursor: pointer;
+  transition: color 0.3s, font-size 0.3s, transform 0.3s;
+}
+.lf-line.past   { color: rgba(255,255,255,0.22); }
+.lf-line.active { font-size: 26px; color: #fff; text-shadow: 0 0 28px rgba(123,108,246,0.6); transform: translateX(4px); }
+.lf-mini { flex-shrink: 0; padding: 12px 24px 36px; }
+.lf-progress { height: 3px; background: var(--border); border-radius: 2px; margin-bottom: 14px; overflow: hidden; }
+.lf-fill     { height: 100%; width: 0%; background: var(--accent); border-radius: 2px; transition: width 0.3s linear; }
+.lf-controls { display: flex; align-items: center; justify-content: center; gap: 20px; }
+
+/* ══════════════════════════════════════
+   VISUAL WRAP — EQ bars + Inline Lyrics
+   v28
+══════════════════════════════════════ */
+.visual-wrap {
+  position: relative;
+  flex-shrink: 0;
+  height: 100px;
+  margin: 12px 0 8px;
+}
+
+/* EQ bars fill the wrap */
+.visual-wrap .eq-artwork {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 20px;
+}
+
+/* ── Inline lyrics zone ── */
+.inline-lyrics {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0 16px;
+}
+.inline-lyrics[hidden] { display: none; }
+
+.inline-status {
+  font-size: 12px;
+  color: var(--text3);
+  text-align: center;
+  font-style: italic;
+}
+
+.inline-lines {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.inline-line {
+  font-size: 13px;
+  color: rgba(255,255,255,0.2);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  padding: 3px 0;
+  line-height: 1.4;
+  transition: color 0.35s, font-size 0.35s;
+}
+.inline-line.near   { color: rgba(255,255,255,0.38); }
+.inline-line.active {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 0 22px rgba(123,108,246,0.75);
+}
+
+/* Not found */
+.inline-nofound { text-align:center; display:flex; flex-direction:column; align-items:center; gap:6px; }
+.inline-nofound[hidden] { display:none; }
+.inline-nofound p { font-size:12px; color:var(--text3); }
+.inline-upload-btn {
+  background: var(--bg3);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  padding: 5px 14px;
+  color: var(--accent2);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Full lyrics button — bottom right of visual wrap */
+.btn-full-lyrics {
+  position: absolute;
+  bottom: 4px;
+  right: 8px;
+  background: rgba(123,108,246,0.15);
+  border: 0.5px solid rgba(123,108,246,0.3);
+  border-radius: 16px;
+  padding: 3px 10px;
+  color: var(--accent2);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.btn-full-lyrics[hidden] { display: none; }
+.btn-full-lyrics i { font-size: 12px; }
+
+/* ── Full lyrics screen (screen-lyrics already exists) ── */
+/* Reuse existing .screen + lyrics CSS from v27 — no changes needed */
