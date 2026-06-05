@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════
-   app.js — UI controller v7 (Optimized)
+   app.js — UI controller v8 (Definitive)
 ═══════════════════════════════════════ */
 const $ = id => document.getElementById(id);
 
@@ -65,57 +65,6 @@ function showScreen(name) {
 }
 btnOpenAdmin.addEventListener('click', () => { renderAdminList(); showScreen('admin'); });
 btnBack.addEventListener('click',      () => showScreen('player'));
-
-/* ── Global Unified Player Callbacks ──── */
-Player.onPlayState = (playing) => {
-  const iconClass = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
-  playIcon.className = iconClass;
-  if ($('lyrics-play-icon')) $('lyrics-play-icon').className = iconClass;
-};
-
-Player.onProgress = (ratio, current, total) => {
-  const pct = (ratio * 100).toFixed(2) + '%';
-  
-  // Main Player UI
-  if (progressFill) progressFill.style.width = pct;
-  if (progressThumb) progressThumb.style.left = pct;
-  if (timeCurrent) timeCurrent.textContent = Player.formatTime(current);
-  if (timeTotal) timeTotal.textContent = Player.formatTime(total);
-  
-  // Lyrics Screen Mini Player UI
-  if ($('lyrics-progress-fill')) $('lyrics-progress-fill').style.width = pct;
-  if ($('lyrics-time-current')) $('lyrics-time-current').textContent = Player.formatTime(current);
-  if ($('lyrics-time-total')) $('lyrics-time-total').textContent = Player.formatTime(total);
-  
-  // Sync Lyrics Cascades
-  if (window.Lyrics && typeof Lyrics.sync === 'function') {
-    Lyrics.sync(current);
-  }
-};
-
-Player.onQueueChange = () => {
-  renderPlaylist();
-};
-
-Player.onTrackChange = (track) => {
-  trackTitle.textContent  = track ? (track.title  || 'Unknown') : 'No track loaded';
-  trackArtist.textContent = track ? (track.artist || 'Unknown') : 'Add songs to get started';
-  
-  renderPlaylist();
-  
-  if (window.Lyrics) {
-    Lyrics.clear();
-    resetInlineLyrics();
-    if (lyricsVisible && track) {
-      loadLyricsForTrack(track);
-    } else if (lyricsVisible) {
-      showLyricsState('no-track');
-    }
-    if (track) {
-      loadLyricsBackground(track);
-    }
-  }
-};
 
 /* ── Transport ────────────────────────── */
 btnPlay.addEventListener('click',    () => Player.togglePlay());
@@ -298,7 +247,12 @@ async function renderAdminList() {
   const size   = await dbGetTotalSize();
   adminCount.textContent = `${tracks.length} song${tracks.length !== 1 ? 's' : ''}`;
   adminSize.textContent  = `${(size / 1024 / 1024).toFixed(1)} MB used`;
-  emptyState.classList.toggle('visible', tracks.length === 0);
+  
+  // CORRECCIÓN CLAVE: Controla si se muestra el aviso de "Agregar canciones"
+  if (emptyState) {
+    emptyState.classList.toggle('visible', tracks.length === 0);
+  }
+  
   if (!tracks.length) { adminList.innerHTML = ''; return; }
   adminList.innerHTML = tracks.map(t => {
     const checked = selectedIds.has(t.id);
@@ -689,7 +643,6 @@ async function openAddToListModal(trackId) {
   modalAddToList.hidden = false;
 }
 addToListCancel.addEventListener('click', () => { modalAddToList.hidden = true; });
-modalAddToList.hidden = false;
 modalAddToList.addEventListener('click', e => { if (e.target === modalAddToList) modalAddToList.hidden = true; });
 
 /* ── Persistent Storage ───────────────── */
@@ -706,12 +659,52 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ── Init (Fix Initial Empty List) ────── */
+/* ── Player Callbacks ─────────────────── */
+Player.onPlayState = (playing) => {
+  const iconClass = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+  playIcon.className = iconClass;
+  if ($('lyrics-play-icon')) $('lyrics-play-icon').className = iconClass;
+};
+
+Player.onProgress = (ratio, current, total) => {
+  const pct = (ratio * 100).toFixed(2) + '%';
+  if (progressFill) progressFill.style.width = pct;
+  if (progressThumb) progressThumb.style.left = pct;
+  if (timeCurrent) timeCurrent.textContent = Player.formatTime(current);
+  if (timeTotal) timeTotal.textContent = Player.formatTime(total);
+  
+  // Lyrics Mini Player
+  if ($('lyrics-progress-fill')) $('lyrics-progress-fill').style.width = pct;
+  if ($('lyrics-time-current')) $('lyrics-time-current').textContent = Player.formatTime(current);
+  if ($('lyrics-time-total')) $('lyrics-time-total').textContent = Player.formatTime(total);
+  
+  // Sincronizar letras del Karaoke
+  if (window.Lyrics) Lyrics.sync(current);
+};
+
+Player.onQueueChange = () => renderPlaylist();
+
+Player.onTrackChange = (track) => {
+  trackTitle.textContent  = track ? (track.title  || 'Unknown') : 'No track loaded';
+  trackArtist.textContent = track ? (track.artist || 'Unknown') : 'Add songs to get started';
+  
+  renderPlaylist();
+  
+  if (window.Lyrics) {
+    Lyrics.clear();
+    resetInlineLyrics();
+    if (lyricsVisible && track) loadLyricsForTrack(track);
+    else if (lyricsVisible) showLyricsState('no-track');
+    if (track) loadLyricsBackground(track);
+  }
+};
+
+/* ── Init (Fix Sequence order) ───────── */
 (async () => {
   Player.setupMediaSession();
-  await Player.loadLibrary(); // Esperar de forma síncrona que cargue la DB
-  renderPlaylist();          // Pintar la lista de reproducción inmediatamente después
-  renderAdminList();         // Garantizar hidratación de la lista de configuración
+  await Player.loadLibrary(); // 1. Forzar lectura real de IndexDB primero
+  renderPlaylist();          // 2. Pintar la lista con datos reales
+  await renderAdminList();   // 3. Evaluar el emptyState correctamente con la DB lista
   
   const t = Player.currentTrack();
   if (t) loadLyricsBackground(t);
@@ -721,7 +714,7 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 
-/* ── Lyrics Screen & Fullscreen System ── */
+/* ── Lyrics Screen System ─────────────── */
 const screenLyrics      = $('screen-lyrics');
 const btnLyrics         = $('btn-lyrics');
 const lyricsClose       = $('lyrics-close');
@@ -740,7 +733,7 @@ const lyricsUploadBtn   = $('lyrics-upload-btn');
 const lyricsUploadBtn2  = $('lyrics-upload-btn2');
 const lyricsDeleteBtn   = $('lyrics-delete-btn');
 const lrcFileInput      = $('lrc-file-input');
-const lyricsControlsBar = $('screen-lyrics')?.querySelector('.lyrics-controls'); // El contenedor inferior
+const lyricsControlsBar = $('screen-lyrics')?.querySelector('.lyrics-controls');
 
 let lyricsVisible = false;
 let controlsTimeout = null;
@@ -749,10 +742,7 @@ function showLyricsScreen() {
   screenLyrics.classList.add('active');
   lyricsVisible = true;
   btnLyrics.classList.add('lyrics-on');
-  
-  // REGLA: Al iniciar la pantalla, los controles visuales SIEMPRE deben estar visibles.
   showLyricsControls();
-  
   const t = Player.currentTrack();
   if (t) loadLyricsForTrack(t);
 }
@@ -770,11 +760,9 @@ btnLyrics.addEventListener('click', () => {
 });
 lyricsClose.addEventListener('click', hideLyricsScreen);
 
-// Gestión táctil inteligente para ocultar/regresar controles en Pantalla Completa
 function showLyricsControls() {
   if (lyricsControlsBar) lyricsControlsBar.classList.remove('hidden-fullscreen');
   resetControlsAutohide();
-  // Se ocultan solos tras 5 segundos de inactividad únicamente si está reproduciendo
   if (Player.playing) {
     controlsTimeout = setTimeout(() => {
       if (lyricsControlsBar) lyricsControlsBar.classList.add('hidden-fullscreen');
@@ -786,16 +774,13 @@ function resetControlsAutohide() {
   if (controlsTimeout) clearTimeout(controlsTimeout);
 }
 
-// Al tocar cualquier parte de la pantalla de letras, los controles regresan de inmediato
 if (screenLyrics) {
   screenLyrics.addEventListener('click', (e) => {
-    // Si tocó un botón interactivo, no disparamos el toggle
     if (e.target.closest('button') || e.target.closest('.lyrics-progress-wrap') || e.target.closest('.lyric-line')) return;
     showLyricsControls();
   });
 }
 
-// Mini player controls in lyrics screen
 $('lyrics-prev').addEventListener('click', (e) => { e.stopPropagation(); Player.prev(); showLyricsControls(); });
 $('lyrics-next').addEventListener('click', (e) => { e.stopPropagation(); Player.next(true); showLyricsControls(); });
 $('lyrics-play').addEventListener('click', (e) => { e.stopPropagation(); Player.togglePlay(); showLyricsControls(); });
@@ -823,11 +808,8 @@ async function loadLyricsBackground(track) {
   const result = await Lyrics.load(track.id, track.title, track.artist);
   const noLyrics = $('inline-no-lyrics');
   if (noLyrics) {
-    if (result === 'found' || result === 'cached') {
-      noLyrics.classList.add('hidden');
-    } else {
-      noLyrics.classList.remove('hidden');
-    }
+    if (result === 'found' || result === 'cached') noLyrics.classList.add('hidden');
+    else noLyrics.classList.remove('hidden');
   }
 }
 
@@ -835,9 +817,7 @@ async function loadLyricsForTrack(track) {
   lyricsTrackTitle.textContent  = track.title  || 'Unknown';
   lyricsTrackArtist.textContent = track.artist || 'Unknown';
   showLyricsState('loading');
-
   const result = await Lyrics.load(track.id, track.title, track.artist);
-
   if (result === 'found' || result === 'cached') {
     renderLyricsLines();
     lyricsDeleteBtn.style.display = '';
@@ -860,7 +840,6 @@ function renderLyricsLines() {
     `<div class="lyric-line" data-idx="${i}">${escHtml(line.text)}</div>`
   ).join('');
 
-  // Tap a line → seek to that time
   lyricsLines.querySelectorAll('.lyric-line').forEach((el, i) => {
     el.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -873,7 +852,7 @@ function renderLyricsLines() {
   });
 }
 
-// Line highlighters + Cascade updates
+// RESTAURACIÓN DE LA CASCADA TÁCTIL (Aquí se procesan las 3 líneas y tamaños grandes)
 Lyrics.onLine = (idx, lines) => {
   const prevEl   = $('inline-prev-line');
   const activeEl = $('inline-active-line');
@@ -887,7 +866,7 @@ Lyrics.onLine = (idx, lines) => {
     if (nextEl) nextEl.textContent = idx < lines.length - 1 ? lines[idx + 1].text : '';
   }
 
-  // Sincronización visual e iluminación dentro de la pantalla completa
+  // Comportamiento dentro de la pantalla completa del Karaoke
   if (lyricsVisible && lyricsLines) {
     lyricsLines.querySelectorAll('.lyric-line').forEach((el, i) => {
       el.classList.toggle('active', i === idx);
