@@ -37,19 +37,14 @@
     <div id="track-artist" class="track-artist">Add songs to get started</div>
   </div>
 
-  <div class="eq-artwork" id="eq-artwork" aria-hidden="true">
-    <div class="eq-bar" style="--d:0.9s"></div>
-    <div class="eq-bar" style="--d:0.7s"></div>
-    <div class="eq-bar" style="--d:1.1s"></div>
-    <div class="eq-bar" style="--d:0.6s"></div>
-    <div class="eq-bar" style="--d:0.8s"></div>
-    <div class="eq-bar" style="--d:0.5s"></div>
-    <div class="eq-bar" style="--d:1.0s"></div>
-    <div class="eq-bar" style="--d:0.75s"></div>
-    <div class="eq-bar" style="--d:0.65s"></div>
-    <div class="eq-bar" style="--d:0.55s"></div>
-    <div class="eq-bar" style="--d:0.85s"></div>
-    <div class="eq-bar" style="--d:0.95s"></div>
+  <!-- INLINE LYRICS (reemplaza las barras EQ) -->
+  <div id="inline-lyrics" class="inline-lyrics" aria-live="polite">
+    <div id="inline-prev-line"    class="inline-line prev"></div>
+    <div id="inline-active-line"  class="inline-line active"></div>
+    <div id="inline-next-line"    class="inline-line next"></div>
+    <div id="inline-no-lyrics"    class="inline-no-lyrics">
+      <i class="ti ti-microphone-2"></i>
+    </div>
   </div>
 
   <div class="progress-section">
