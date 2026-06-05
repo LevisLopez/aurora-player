@@ -962,3 +962,38 @@ body { transition: background 1s ease; }
 .add-to-list-opt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border-radius: 12px; border: 0.5px solid var(--border); background: var(--bg3); color: var(--text); font-family: var(--font-body); font-size: 14px; cursor: pointer; text-align: left; transition: background 0.15s; }
 .add-to-list-opt:active { background: var(--border); }
 .add-to-list-opt i { color: var(--accent); font-size: 18px; flex-shrink: 0; }
+
+
+
+
+/* Limitar la altura de la lista de reproducción y activar scroll interno */
+#playlist, #admin-list {
+    max-height: 50vh !important; /* No permite que ocupe más de la mitad de la pantalla */
+    overflow-y: auto !important; /* Agrega scroll vertical si se pasa de canciones */
+    overflow-x: hidden;
+    padding-bottom: 20px;
+    -webkit-overflow-scrolling: touch; /* Scroll suave en móviles */
+}
+
+/* Asegurar que el contenedor padre no colapse ni se desborde */
+.playlist-container, .admin-list-container {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Estilo para que la línea activa del Karaoke destaque en grande en pantalla completa */
+.lyric-line {
+    font-size: 1.25rem;
+    transition: all 0.3s ease;
+    opacity: 0.4;
+    text-align: center;
+    padding: 12px 20px;
+}
+.lyric-line.active {
+    font-size: 1.85rem !important; /* Mucho más grande y visible para cantar fácil */
+    font-weight: bold;
+    opacity: 1 !important;
+    color: #fff;
+    transform: scale(1.05);
+}
