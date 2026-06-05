@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════
-   app.js — UI controller v10 (Definitive Fixed)
+   app.js — UI controller v6 (stable)
 ═══════════════════════════════════════ */
 const $ = id => document.getElementById(id);
 
@@ -48,8 +48,7 @@ let renamingId  = null;
 let toastTimer  = null;
 let selectMode  = false;
 let selectedIds = new Set();
-let activeListId = null; 
-let addToListTrackId = null; 
+let activeListId = null; // id of currently open playlist
 
 /* ── Toast ───────────────────────────── */
 function showToast(msg, ms = 2500) {
@@ -66,6 +65,10 @@ function showScreen(name) {
 }
 btnOpenAdmin.addEventListener('click', () => { renderAdminList(); showScreen('admin'); });
 btnBack.addEventListener('click',      () => showScreen('player'));
+
+/* ── Player callbacks ─────────────────── */
+// onTrackChange, onProgress, onPlayState definidos en sección karaoke abajo
+Player.onQueueChange = () => renderPlaylist();
 
 /* ── Transport ────────────────────────── */
 btnPlay.addEventListener('click',    () => Player.togglePlay());
@@ -144,6 +147,7 @@ searchInput.addEventListener('input', () => {
       const t = Player.tracks.find(t => t.id === id);
       if (t) t.favorite = val;
       renderPlaylist();
+      // re-trigger search to refresh results
       searchInput.dispatchEvent(new Event('input'));
       showToast(val ? '♥ Added to Favorites' : 'Removed from Favorites');
     });
@@ -161,7 +165,6 @@ tabAll.addEventListener('click', () => {
   tabLists.classList.remove('active');
   hideListsPanel(); hideListDetail();
   Player.setFavoritesOnly(false);
-  renderPlaylist();
 });
 tabFav.addEventListener('click', () => {
   if (activeTab === 'favorites') return;
@@ -171,7 +174,6 @@ tabFav.addEventListener('click', () => {
   tabLists.classList.remove('active');
   hideListsPanel(); hideListDetail();
   Player.setFavoritesOnly(true);
-  renderPlaylist();
 });
 tabLists.addEventListener('click', () => {
   if (activeTab === 'lists') return;
@@ -248,11 +250,7 @@ async function renderAdminList() {
   const size   = await dbGetTotalSize();
   adminCount.textContent = `${tracks.length} song${tracks.length !== 1 ? 's' : ''}`;
   adminSize.textContent  = `${(size / 1024 / 1024).toFixed(1)} MB used`;
-  
-  if (emptyState) {
-    emptyState.classList.toggle('visible', tracks.length === 0);
-  }
-  
+  emptyState.classList.toggle('visible', tracks.length === 0);
   if (!tracks.length) { adminList.innerHTML = ''; return; }
   adminList.innerHTML = tracks.map(t => {
     const checked = selectedIds.has(t.id);
@@ -264,32 +262,25 @@ async function renderAdminList() {
         <div class="admin-artist">${escHtml(t.artist || 'Unknown')}</div>
       </div>
       <div class="admin-actions" ${selectMode ? 'style="display:none"' : ''}>
-        <button class="admin-btn add-list-btn" data-track-id="${t.id}" title="Add to playlist"><i class="ti ti-list-plus"></i></button>
+        <button class="admin-btn add-list-btn" data-id="${t.id}" title="Add to playlist"><i class="ti ti-list-plus"></i></button>
         <button class="admin-btn edit-btn"     data-id="${t.id}"><i class="ti ti-pencil"></i></button>
-        <button class="admin-btn delete-action-btn" data-id="${t.id}"><i class="ti ti-trash"></i></button>
+        <button class="admin-btn delete delete-btn" data-id="${t.id}"><i class="ti ti-trash"></i></button>
       </div>
     </div>`;
   }).join('');
 
   adminList.querySelectorAll('.admin-item').forEach(item => {
     item.addEventListener('click', (e) => {
-      if (e.target.closest('.edit-btn') || e.target.closest('.delete-action-btn') || e.target.closest('.add-list-btn')) return;
+      if (e.target.closest('.edit-btn') || e.target.closest('.delete-btn') || e.target.closest('.add-list-btn')) return;
       if (selectMode) toggleSelectItem(parseInt(item.dataset.id, 10));
     });
   });
   adminList.querySelectorAll('.edit-btn').forEach(b =>
     b.addEventListener('click', () => openRenameModal(parseInt(b.dataset.id, 10))));
-  adminList.querySelectorAll('.delete-action-btn').forEach(b =>
+  adminList.querySelectorAll('.delete-btn').forEach(b =>
     b.addEventListener('click', () => deleteSong(parseInt(b.dataset.id, 10))));
-    
-  // EVENTO CORREGIDO: Extrae de forma segura el atributo de la canción
   adminList.querySelectorAll('.add-list-btn').forEach(b =>
-    b.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const trackId = parseInt(b.getAttribute('data-track-id') || b.dataset.id, 10);
-      openAddToListModal(trackId);
-    })
-  );
+    b.addEventListener('click', () => openAddToListModal(parseInt(b.dataset.id, 10))));
 }
 
 /* ── File import ──────────────────────── */
@@ -313,7 +304,7 @@ fileInput.addEventListener('change', async () => {
     added++;
   }
   fileInput.value = '';
-  if (dups.length) showToast(`Already exists: ${dups.join(', ')}`, 4000);
+  if (dups.length)  showToast(`Already exists: ${dups.join(', ')}`, 4000);
   if (added > 0) {
     await Player.refreshLibrary();
     renderAdminList();
@@ -368,18 +359,16 @@ modalSave.addEventListener('click', async () => {
 });
 
 /* ── Sleep Timer UI ───────────────────── */
-const btnSleepOpen      = $('btn-sleep');
-const modalSleep        = $('modal-sleep');
+const btnSleepOpen     = $('btn-sleep');
+const modalSleep       = $('modal-sleep');
 const modalSleepCancel = $('modal-sleep-cancel');
 const sleepCustomInput = $('sleep-custom-input');
 const sleepCustomSet   = $('sleep-custom-set');
 
-if (btnSleepOpen) {
-  btnSleepOpen.addEventListener('click', () => {
-    if (window.SleepTimer && SleepTimer.active) { SleepTimer.cancel(); showToast('Sleep timer cancelled'); return; }
-    modalSleep.hidden = false;
-  });
-}
+btnSleepOpen.addEventListener('click', () => {
+  if (SleepTimer.active) { SleepTimer.cancel(); showToast('Sleep timer cancelled'); return; }
+  modalSleep.hidden = false;
+});
 modalSleepCancel.addEventListener('click', () => { modalSleep.hidden = true; });
 modalSleep.addEventListener('click', e => { if (e.target === modalSleep) modalSleep.hidden = true; });
 document.querySelectorAll('.sleep-opt-btn').forEach(btn => {
@@ -498,10 +487,10 @@ importFileInput.addEventListener('change', async () => {
 });
 
 /* ── Playlists ─────────────────────────── */
-const listsPanel      = $('lists-panel');
-const listsGrid       = $('lists-grid');
-const btnNewList      = $('btn-new-list');
-const listDetail      = $('list-detail');
+const listsPanel     = $('lists-panel');
+const listsGrid      = $('lists-grid');
+const btnNewList     = $('btn-new-list');
+const listDetail     = $('list-detail');
 const listBack       = $('list-back');
 const listDetailName = $('list-detail-name');
 const listDeleteBtn  = $('list-delete');
@@ -571,17 +560,17 @@ function renderListDetail(pl) {
         <div class="pl-title">${escHtml(t.title || 'Unknown')}</div>
         <div class="pl-artist">${escHtml(t.artist || 'Unknown')}</div>
       </div>
-      <button class="admin-btn delete-item-list-btn" data-id="${t.id}" title="Remove from list"><i class="ti ti-x"></i></button>
+      <button class="admin-btn delete remove-from-list-btn" data-id="${t.id}" title="Remove from list"><i class="ti ti-x"></i></button>
       <span class="pl-dur">${t.duration ? Player.formatTime(t.duration) : '—'}</span>
     </div>`;
   }).join('');
   listDetailTracks.querySelectorAll('.playlist-item').forEach(el => {
     el.addEventListener('click', (e) => {
-      if (e.target.closest('.delete-item-list-btn')) return;
+      if (e.target.closest('.remove-from-list-btn')) return;
       Player.playById(parseInt(el.dataset.id, 10));
     });
   });
-  listDetailTracks.querySelectorAll('.delete-item-list-btn').forEach(btn => {
+  listDetailTracks.querySelectorAll('.remove-from-list-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       await dbRemoveTrackFromPlaylist(activeListId, parseInt(btn.dataset.id, 10));
@@ -625,12 +614,9 @@ newListSave.addEventListener('click', async () => {
 });
 newListName.addEventListener('keydown', e => { if (e.key === 'Enter') newListSave.click(); });
 
-// FUNCIÓN CORREGIDA: Sincroniza perfectamente el Id de la canción y de la playlist elegida
+// Add to playlist modal
+let addToListTrackId = null;
 async function openAddToListModal(trackId) {
-  if (!trackId) {
-    showToast('Error: Invalid song selected');
-    return;
-  }
   addToListTrackId = trackId;
   const lists = await dbGetAllPlaylists();
   if (!lists.length) {
@@ -638,23 +624,16 @@ async function openAddToListModal(trackId) {
     return;
   }
   addToListOpts.innerHTML = lists.map(pl => `
-    <button class="add-to-list-opt" data-playlist-id="${pl.id}">
+    <button class="add-to-list-opt" data-id="${pl.id}">
       <i class="ti ti-playlist"></i>
       <span>${escHtml(pl.name)}</span>
       <span style="font-size:11px;color:var(--text3);margin-left:auto;">${pl.trackIds.length} songs</span>
     </button>`).join('');
-    
   addToListOpts.querySelectorAll('.add-to-list-opt').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const plId = parseInt(btn.getAttribute('data-playlist-id'), 10);
-      if (plId && addToListTrackId) {
-        await dbAddTrackToPlaylist(plId, addToListTrackId);
-        modalAddToList.hidden = true;
-        showToast('Added to playlist!');
-        if (activeTab === 'lists') renderListsPanel();
-      } else {
-        showToast('Error adding track');
-      }
+      await dbAddTrackToPlaylist(parseInt(btn.dataset.id, 10), addToListTrackId);
+      modalAddToList.hidden = true;
+      showToast('Added to playlist!');
     });
   });
   modalAddToList.hidden = false;
@@ -676,51 +655,12 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ── Player Callbacks ─────────────────── */
-Player.onPlayState = (playing) => {
-  const iconClass = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
-  playIcon.className = iconClass;
-  if ($('lyrics-play-icon')) $('lyrics-play-icon').className = iconClass;
-};
-
-Player.onProgress = (ratio, current, total) => {
-  const pct = (ratio * 100).toFixed(2) + '%';
-  if (progressFill) progressFill.style.width = pct;
-  if (progressThumb) progressThumb.style.left = pct;
-  if (timeCurrent) timeCurrent.textContent = Player.formatTime(current);
-  if (timeTotal) timeTotal.textContent = Player.formatTime(total);
-  
-  if ($('lyrics-progress-fill')) $('lyrics-progress-fill').style.width = pct;
-  if ($('lyrics-time-current')) $('lyrics-time-current').textContent = Player.formatTime(current);
-  if ($('lyrics-time-total')) $('lyrics-time-total').textContent = Player.formatTime(total);
-  
-  if (window.Lyrics) Lyrics.sync(current);
-};
-
-Player.onQueueChange = () => renderPlaylist();
-
-Player.onTrackChange = (track) => {
-  trackTitle.textContent  = track ? (track.title  || 'Unknown') : 'No track loaded';
-  trackArtist.textContent = track ? (track.artist || 'Unknown') : 'Add songs to get started';
-  
-  renderPlaylist();
-  
-  if (window.Lyrics) {
-    Lyrics.clear();
-    resetInlineLyrics();
-    if (lyricsVisible && track) loadLyricsForTrack(track);
-    else if (lyricsVisible) showLyricsState('no-track');
-    if (track) loadLyricsBackground(track);
-  }
-};
-
-/* ── Init ────────────────────────────── */
+/* ── Init ─────────────────────────────── */
 (async () => {
   Player.setupMediaSession();
   await Player.loadLibrary();
   renderPlaylist();
-  await renderAdminList();
-  
+  // Cargar letras en background para el widget inline
   const t = Player.currentTrack();
   if (t) loadLyricsBackground(t);
 })();
@@ -729,35 +669,32 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 
-/* ── Lyrics Screen System ─────────────── */
+/* ── Lyrics screen ────────────────────── */
 const screenLyrics      = $('screen-lyrics');
 const btnLyrics         = $('btn-lyrics');
 const lyricsClose       = $('lyrics-close');
 const lyricsLines       = $('lyrics-lines');
-const lyricsLoading      = $('lyrics-loading');
+const lyricsLoading     = $('lyrics-loading');
 const lyricsNotFound    = $('lyrics-not-found');
 const lyricsNoTrack     = $('lyrics-no-track');
 const lyricsTrackTitle  = $('lyrics-track-title');
 const lyricsTrackArtist = $('lyrics-track-artist');
-const lyricsPFill        = $('lyrics-progress-fill');
-const lyricsCurrent      = $('lyrics-time-current');
-const lyricsTotal        = $('lyrics-time-total');
+const lyricsPFill       = $('lyrics-progress-fill');
+const lyricsCurrent     = $('lyrics-time-current');
+const lyricsTotal       = $('lyrics-time-total');
 const lyricsPlayIcon    = $('lyrics-play-icon');
 const lyricsProgressWrap= $('lyrics-progress-wrap');
 const lyricsUploadBtn   = $('lyrics-upload-btn');
 const lyricsUploadBtn2  = $('lyrics-upload-btn2');
 const lyricsDeleteBtn   = $('lyrics-delete-btn');
 const lrcFileInput      = $('lrc-file-input');
-const lyricsControlsBar = $('screen-lyrics')?.querySelector('.lyrics-controls');
 
 let lyricsVisible = false;
-let controlsTimeout = null;
 
 function showLyricsScreen() {
   screenLyrics.classList.add('active');
   lyricsVisible = true;
   btnLyrics.classList.add('lyrics-on');
-  showLyricsControls();
   const t = Player.currentTrack();
   if (t) loadLyricsForTrack(t);
 }
@@ -766,7 +703,6 @@ function hideLyricsScreen() {
   screenLyrics.classList.remove('active');
   lyricsVisible = false;
   btnLyrics.classList.remove('lyrics-on');
-  resetControlsAutohide();
 }
 
 btnLyrics.addEventListener('click', () => {
@@ -775,59 +711,143 @@ btnLyrics.addEventListener('click', () => {
 });
 lyricsClose.addEventListener('click', hideLyricsScreen);
 
-function showLyricsControls() {
-  if (lyricsControlsBar) lyricsControlsBar.classList.remove('hidden-fullscreen');
-  resetControlsAutohide();
-  if (Player.playing) {
-    controlsTimeout = setTimeout(() => {
-      if (lyricsControlsBar) lyricsControlsBar.classList.add('hidden-fullscreen');
-    }, 5000);
-  }
-}
-
-function resetControlsAutohide() {
-  if (controlsTimeout) clearTimeout(controlsTimeout);
-}
-
-if (screenLyrics) {
-  screenLyrics.addEventListener('click', (e) => {
-    if (e.target.closest('button') || e.target.closest('.lyrics-progress-wrap') || e.target.closest('.lyric-line')) return;
-    showLyricsControls();
-  });
-}
-
-$('lyrics-prev').addEventListener('click', (e) => { e.stopPropagation(); Player.prev(); showLyricsControls(); });
-$('lyrics-next').addEventListener('click', (e) => { e.stopPropagation(); Player.next(true); showLyricsControls(); });
-$('lyrics-play').addEventListener('click', (e) => { e.stopPropagation(); Player.togglePlay(); showLyricsControls(); });
+// Mini player controls in lyrics screen
+$('lyrics-prev').addEventListener('click', () => Player.prev());
+$('lyrics-next').addEventListener('click', () => Player.next(true));
+$('lyrics-play').addEventListener('click', () => Player.togglePlay());
 
 lyricsProgressWrap.addEventListener('click', (e) => {
-  e.stopPropagation();
   const rect = lyricsProgressWrap.getBoundingClientRect();
   Player.seek(Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1));
-  showLyricsControls();
 });
 
-function resetInlineLyrics() {
-  const prevEl   = $('inline-prev-line');
-  const activeEl = $('inline-active-line');
-  const nextEl   = $('inline-next-line');
-  const noLyrics = $('inline-no-lyrics');
-  
-  if (prevEl) prevEl.textContent = '';
-  if (activeEl) activeEl.textContent = '';
-  if (nextEl) nextEl.textContent = '';
-  if (noLyrics) noLyrics.classList.remove('hidden');
+// Update mini player progress — manejado en sección karaoke
+
+// Load lyrics when track changes
+Player.onTrackChange = (track) => {
+  trackTitle.textContent  = track ? (track.title  || 'Unknown') : 'No track loaded';
+  trackArtist.textContent = track ? (track.artist || 'Unknown') : 'Add songs to get started';
+  renderPlaylist();
+  Lyrics.clear();
+  resetKaraoke();
+  if (lyricsVisible && track) loadLyricsForTrack(track);
+  else if (lyricsVisible) showLyricsState('no-track');
+  if (track) loadLyricsBackground(track);
+};
+
+/* ══════════════════════════════════════
+   KARAOKE ZONE (60% pantalla principal)
+══════════════════════════════════════ */
+const karaokeScroll  = $('karaoke-scroll');
+const karaokeLines   = $('karaoke-lines');
+const karaokeNoLyrics= $('karaoke-no-lyrics');
+
+function resetKaraoke() {
+  karaokeLines.hidden = true;
+  karaokeLines.innerHTML = '';
+  karaokeNoLyrics.classList.remove('hidden');
+  karaokeLines.style.transform = '';
+  // Fullscreen también
+  const kfl = $('kf-lines-inner');
+  if (kfl) { kfl.innerHTML = ''; kfl.style.transform = ''; }
+  $('kf-no-lyrics').hidden = false;
 }
 
 async function loadLyricsBackground(track) {
   const result = await Lyrics.load(track.id, track.title, track.artist);
-  const noLyrics = $('inline-no-lyrics');
-  if (noLyrics) {
-    if (result === 'found' || result === 'cached') noLyrics.classList.add('hidden');
-    else noLyrics.classList.remove('hidden');
+  if (result === 'found' || result === 'cached') {
+    renderKaraokeLines();
+    $('kf-no-lyrics').hidden = true;
+  } else {
+    karaokeNoLyrics.classList.remove('hidden');
+    karaokeLines.hidden = true;
+    $('kf-no-lyrics').hidden = false;
   }
 }
 
+function renderKaraokeLines() {
+  karaokeNoLyrics.classList.add('hidden');
+  karaokeLines.hidden = false;
+  karaokeLines.innerHTML = Lyrics.lines.map((line, i) =>
+    `<div class="karaoke-line" data-idx="${i}">${escHtml(line.text)}</div>`
+  ).join('');
+  karaokeLines.querySelectorAll('.karaoke-line').forEach((el, i) => {
+    el.addEventListener('click', () => {
+      Player.seek(Lyrics.lines[i].time / document.getElementById('audio').duration);
+    });
+  });
+
+  // Fullscreen lines
+  renderKaraokeFullscreenLines();
+}
+
+function renderKaraokeFullscreenLines() {
+  let inner = $('kf-lines-inner');
+  if (!inner) {
+    inner = document.createElement('div');
+    inner.id = 'kf-lines-inner';
+    inner.className = 'kf-lines-inner';
+    $('kf-lines').appendChild(inner);
+  }
+  $('kf-no-lyrics').hidden = true;
+  inner.innerHTML = Lyrics.lines.map((line, i) =>
+    `<div class="kf-line" data-idx="${i}">${escHtml(line.text)}</div>`
+  ).join('');
+  inner.querySelectorAll('.kf-line').forEach((el, i) => {
+    el.addEventListener('click', () => {
+      Player.seek(Lyrics.lines[i].time / document.getElementById('audio').duration);
+    });
+  });
+}
+
+// Scroll karaoke: desplaza el contenedor para centrar la línea activa
+function scrollKaraoke(container, idx) {
+  if (idx < 0 || !container) return;
+  const lines = container.querySelectorAll('[data-idx]');
+  if (!lines[idx]) return;
+  const containerH = container.parentElement.clientHeight;
+  const lineTop    = lines[idx].offsetTop;
+  const lineH      = lines[idx].offsetHeight;
+  const offset     = lineTop - (containerH / 2) + (lineH / 2);
+  container.style.transform = `translateY(${-offset}px)`;
+}
+
+// Cuando cambia la línea activa
+Lyrics.onLine = (idx, lines) => {
+  // ── Karaoke zone (60%) ──
+  const kEls = karaokeLines.querySelectorAll('.karaoke-line');
+  kEls.forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+    el.classList.toggle('past',   i < idx);
+  });
+  if (idx >= 0) scrollKaraoke(karaokeLines, idx);
+
+  // ── Fullscreen karaoke ──
+  const kfInner = $('kf-lines-inner');
+  if (kfInner) {
+    const kfEls = kfInner.querySelectorAll('.kf-line');
+    kfEls.forEach((el, i) => {
+      el.classList.toggle('active', i === idx);
+      el.classList.toggle('past',   i < idx);
+    });
+    if (idx >= 0) scrollKaraoke(kfInner, idx);
+  }
+
+  // ── Pantalla lyrics completa ──
+  if (!lyricsVisible) return;
+  const els = lyricsLines.querySelectorAll('.lyric-line');
+  els.forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+    el.classList.toggle('past',   i < idx);
+  });
+  if (idx >= 0 && els[idx]) {
+    els[idx].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+};
+
+/* ══════════════════════════════════════
+   PANTALLA LYRICS COMPLETA (screen-lyrics)
+══════════════════════════════════════ */
 async function loadLyricsForTrack(track) {
   lyricsTrackTitle.textContent  = track.title  || 'Unknown';
   lyricsTrackArtist.textContent = track.artist || 'Unknown';
@@ -836,6 +856,8 @@ async function loadLyricsForTrack(track) {
   if (result === 'found' || result === 'cached') {
     renderLyricsLines();
     lyricsDeleteBtn.style.display = '';
+    // También renderizar karaoke zone si aún no está
+    if (karaokeLines.children.length === 0) renderKaraokeLines();
   } else {
     showLyricsState('not-found');
     lyricsDeleteBtn.style.display = 'none';
@@ -854,39 +876,125 @@ function renderLyricsLines() {
   lyricsLines.innerHTML = Lyrics.lines.map((line, i) =>
     `<div class="lyric-line" data-idx="${i}">${escHtml(line.text)}</div>`
   ).join('');
-
   lyricsLines.querySelectorAll('.lyric-line').forEach((el, i) => {
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const audioEl = document.getElementById('audio');
-      if (audioEl && audioEl.duration) {
-        Player.seek(Lyrics.lines[i].time / audioEl.duration);
-      }
-      showLyricsControls();
+    el.addEventListener('click', () => {
+      Player.seek(Lyrics.lines[i].time / document.getElementById('audio').duration);
     });
   });
 }
 
-Lyrics.onLine = (idx, lines) => {
-  const prevEl   = $('inline-prev-line');
-  const activeEl = $('inline-active-line');
-  const nextEl   = $('inline-next-line');
-  const noLyrics = $('inline-no-lyrics');
+/* ══════════════════════════════════════
+   FULLSCREEN KARAOKE
+══════════════════════════════════════ */
+const kfOverlay   = $('karaoke-fullscreen');
+const kfControls  = $('kf-controls');
+const btnExpand   = $('btn-expand');
+const btnCollapse = $('btn-collapse');
+let kfControlsTimer = null;
+let kfOpen = false;
 
-  if (idx >= 0 && lines.length) {
-    if (noLyrics) noLyrics.classList.add('hidden');
-    if (prevEl) prevEl.textContent = idx > 0 ? lines[idx - 1].text : '';
-    if (activeEl) activeEl.textContent = lines[idx].text;
-    if (nextEl) nextEl.textContent = idx < lines.length - 1 ? lines[idx + 1].text : '';
-  }
+function openFullscreen() {
+  kfOpen = true;
+  kfOverlay.hidden = false;
+  kfControls.hidden = true;
+  // Sincronizar info del track
+  const t = Player.currentTrack();
+  $('kf-title').textContent  = t?.title  || '—';
+  $('kf-artist').textContent = t?.artist || '—';
+  $('kf-play-icon').className = Player.isPlaying ? 'ti ti-player-pause' : 'ti ti-player-play';
+  // Si no hay líneas renderizadas aún, renderizar
+  if (!$('kf-lines-inner') && Lyrics.enabled) renderKaraokeFullscreenLines();
+  // Volver a centrar en línea actual
+  if (Lyrics.activeIdx >= 0) scrollKaraoke($('kf-lines-inner'), Lyrics.activeIdx);
+}
 
-  if (lyricsVisible && lyricsLines) {
-    lyricsLines.querySelectorAll('.lyric-line').forEach((el, i) => {
-      el.classList.toggle('active', i === idx);
-    });
-    const activeLineEl = lyricsLines.querySelector('.lyric-line.active');
-    if (activeLineEl) {
-      activeLineEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
+function closeFullscreen() {
+  kfOpen = false;
+  kfOverlay.hidden = true;
+  clearTimeout(kfControlsTimer);
+}
+
+function showKfControls() {
+  kfControls.hidden = false;
+  clearTimeout(kfControlsTimer);
+  kfControlsTimer = setTimeout(() => { kfControls.hidden = true; }, 3000);
+}
+
+btnExpand.addEventListener('click',   openFullscreen);
+btnCollapse.addEventListener('click', closeFullscreen);
+
+// Tocar la pantalla → mostrar controles temporalmente
+kfOverlay.addEventListener('click', (e) => {
+  if (e.target.closest('#kf-controls')) return; // clic dentro de controles → no ocultar
+  if (kfControls.hidden) showKfControls();
+  else { clearTimeout(kfControlsTimer); kfControls.hidden = true; }
+});
+
+// Botones del fullscreen
+$('kf-prev').addEventListener('click', () => Player.prev());
+$('kf-next').addEventListener('click', () => Player.next(true));
+$('kf-play').addEventListener('click', () => Player.togglePlay());
+$('kf-progress-wrap').addEventListener('click', (e) => {
+  const rect = $('kf-progress-wrap').getBoundingClientRect();
+  Player.seek(Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1));
+});
+
+// Sync progress en fullscreen
+Player.onProgress = (ratio, current, total) => {
+  const pct = (ratio * 100).toFixed(2) + '%';
+  progressFill.style.width = pct;
+  progressThumb.style.left = pct;
+  timeCurrent.textContent  = Player.formatTime(current);
+  timeTotal.textContent    = Player.formatTime(total);
+  // Lyrics mini player
+  lyricsPFill.style.width   = pct;
+  lyricsCurrent.textContent = Player.formatTime(current);
+  lyricsTotal.textContent   = Player.formatTime(total);
+  // Fullscreen
+  if (kfOpen) {
+    $('kf-progress-fill').style.width  = pct;
+    $('kf-time-current').textContent   = Player.formatTime(current);
+    $('kf-time-total').textContent     = Player.formatTime(total);
   }
+  // Sync lyrics
+  Lyrics.sync(current);
 };
+
+Player.onPlayState = (playing) => {
+  playIcon.className       = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+  lyricsPlayIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+  $('kf-play-icon').className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+};
+
+/* ── Upload .lrc file ── */
+function handleLrcUpload() { lrcFileInput.click(); }
+lyricsUploadBtn.addEventListener('click',  handleLrcUpload);
+lyricsUploadBtn2.addEventListener('click', handleLrcUpload);
+
+lrcFileInput.addEventListener('change', async () => {
+  const file = lrcFileInput.files[0];
+  if (!file) return;
+  const text  = await file.text();
+  const track = Player.currentTrack();
+  if (!track) return;
+  const ok = await Lyrics.saveManual(track.id, text);
+  lrcFileInput.value = '';
+  if (ok) {
+    renderLyricsLines();
+    lyricsDeleteBtn.style.display = '';
+    showToast('Lyrics loaded!');
+  } else {
+    showToast('Could not parse .lrc file');
+  }
+});
+
+// Delete lyrics
+lyricsDeleteBtn.addEventListener('click', async () => {
+  const track = Player.currentTrack();
+  if (!track) return;
+  if (!confirm('Delete lyrics for this song?')) return;
+  await Lyrics.remove(track.id);
+  showLyricsState('not-found');
+  lyricsDeleteBtn.style.display = 'none';
+  showToast('Lyrics deleted');
+});
