@@ -670,6 +670,9 @@ function escHtml(s) {
   Player.setupMediaSession();
   await Player.loadLibrary();
   renderPlaylist();
+  // Cargar letras en background para el widget inline
+  const t = Player.currentTrack();
+  if (t) loadLyricsBackground(t);
 })();
 
 if ('serviceWorker' in navigator) {
@@ -754,9 +757,29 @@ Player.onTrackChange = (track) => {
   trackArtist.textContent = track ? (track.artist || 'Unknown') : 'Add songs to get started';
   renderPlaylist();
   Lyrics.clear();
+  resetInlineLyrics();
   if (lyricsVisible && track) loadLyricsForTrack(track);
   else if (lyricsVisible) showLyricsState('no-track');
+  // Cargar letras en background para el widget inline aunque la pantalla no esté abierta
+  if (track) loadLyricsBackground(track);
 };
+
+function resetInlineLyrics() {
+  $('inline-prev-line').textContent   = '';
+  $('inline-active-line').textContent = '';
+  $('inline-next-line').textContent   = '';
+  $('inline-no-lyrics').classList.remove('hidden');
+}
+
+async function loadLyricsBackground(track) {
+  const result = await Lyrics.load(track.id, track.title, track.artist);
+  const noLyrics = $('inline-no-lyrics');
+  if (result === 'found' || result === 'cached') {
+    noLyrics.classList.add('hidden');
+  } else {
+    noLyrics.classList.remove('hidden');
+  }
+}
 
 async function loadLyricsForTrack(track) {
   lyricsTrackTitle.textContent  = track.title  || 'Unknown';
@@ -795,8 +818,23 @@ function renderLyricsLines() {
   });
 }
 
-// When active line changes — highlight + scroll
+// When active line changes — highlight + scroll (pantalla lyrics)
+// Y también actualizar el widget inline en el player principal
 Lyrics.onLine = (idx, lines) => {
+  // ── Inline lyrics widget ──────────────
+  const prevEl   = $('inline-prev-line');
+  const activeEl = $('inline-active-line');
+  const nextEl   = $('inline-next-line');
+  const noLyrics = $('inline-no-lyrics');
+
+  if (idx >= 0 && lines.length) {
+    noLyrics.classList.add('hidden');
+    prevEl.textContent   = idx > 0              ? lines[idx - 1].text : '';
+    activeEl.textContent = lines[idx].text;
+    nextEl.textContent   = idx < lines.length-1 ? lines[idx + 1].text : '';
+  }
+
+  // ── Pantalla lyrics completa ──────────
   if (!lyricsVisible) return;
   const els = lyricsLines.querySelectorAll('.lyric-line');
   els.forEach((el, i) => {
@@ -808,7 +846,12 @@ Lyrics.onLine = (idx, lines) => {
   }
 };
 
-// Upload .lrc file
+// Tocar el widget inline abre la pantalla de letras
+document.getElementById('inline-lyrics').addEventListener('click', () => {
+  if (Player.currentTrack()) showLyricsScreen();
+});
+
+/* ── Upload .lrc file ── */
 function handleLrcUpload() { lrcFileInput.click(); }
 lyricsUploadBtn.addEventListener('click',  handleLrcUpload);
 lyricsUploadBtn2.addEventListener('click', handleLrcUpload);
