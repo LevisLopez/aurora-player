@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════
-   app.js — UI controller v6 (stable)
+   app.js — UI controller v7 (Optimized)
 ═══════════════════════════════════════ */
 const $ = id => document.getElementById(id);
 
@@ -48,7 +48,7 @@ let renamingId  = null;
 let toastTimer  = null;
 let selectMode  = false;
 let selectedIds = new Set();
-let activeListId = null; // id of currently open playlist
+let activeListId = null; 
 
 /* ── Toast ───────────────────────────── */
 function showToast(msg, ms = 2500) {
@@ -66,19 +66,56 @@ function showScreen(name) {
 btnOpenAdmin.addEventListener('click', () => { renderAdminList(); showScreen('admin'); });
 btnBack.addEventListener('click',      () => showScreen('player'));
 
-/* ── Player callbacks ─────────────────── */
-// onTrackChange defined in lyrics section below
+/* ── Global Unified Player Callbacks ──── */
 Player.onPlayState = (playing) => {
-  playIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+  const iconClass = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+  playIcon.className = iconClass;
+  if ($('lyrics-play-icon')) $('lyrics-play-icon').className = iconClass;
 };
+
 Player.onProgress = (ratio, current, total) => {
   const pct = (ratio * 100).toFixed(2) + '%';
-  progressFill.style.width = pct;
-  progressThumb.style.left = pct;
-  timeCurrent.textContent  = Player.formatTime(current);
-  timeTotal.textContent    = Player.formatTime(total);
+  
+  // Main Player UI
+  if (progressFill) progressFill.style.width = pct;
+  if (progressThumb) progressThumb.style.left = pct;
+  if (timeCurrent) timeCurrent.textContent = Player.formatTime(current);
+  if (timeTotal) timeTotal.textContent = Player.formatTime(total);
+  
+  // Lyrics Screen Mini Player UI
+  if ($('lyrics-progress-fill')) $('lyrics-progress-fill').style.width = pct;
+  if ($('lyrics-time-current')) $('lyrics-time-current').textContent = Player.formatTime(current);
+  if ($('lyrics-time-total')) $('lyrics-time-total').textContent = Player.formatTime(total);
+  
+  // Sync Lyrics Cascades
+  if (window.Lyrics && typeof Lyrics.sync === 'function') {
+    Lyrics.sync(current);
+  }
 };
-Player.onQueueChange = () => renderPlaylist();
+
+Player.onQueueChange = () => {
+  renderPlaylist();
+};
+
+Player.onTrackChange = (track) => {
+  trackTitle.textContent  = track ? (track.title  || 'Unknown') : 'No track loaded';
+  trackArtist.textContent = track ? (track.artist || 'Unknown') : 'Add songs to get started';
+  
+  renderPlaylist();
+  
+  if (window.Lyrics) {
+    Lyrics.clear();
+    resetInlineLyrics();
+    if (lyricsVisible && track) {
+      loadLyricsForTrack(track);
+    } else if (lyricsVisible) {
+      showLyricsState('no-track');
+    }
+    if (track) {
+      loadLyricsBackground(track);
+    }
+  }
+};
 
 /* ── Transport ────────────────────────── */
 btnPlay.addEventListener('click',    () => Player.togglePlay());
@@ -157,7 +194,6 @@ searchInput.addEventListener('input', () => {
       const t = Player.tracks.find(t => t.id === id);
       if (t) t.favorite = val;
       renderPlaylist();
-      // re-trigger search to refresh results
       searchInput.dispatchEvent(new Event('input'));
       showToast(val ? '♥ Added to Favorites' : 'Removed from Favorites');
     });
@@ -175,6 +211,7 @@ tabAll.addEventListener('click', () => {
   tabLists.classList.remove('active');
   hideListsPanel(); hideListDetail();
   Player.setFavoritesOnly(false);
+  renderPlaylist();
 });
 tabFav.addEventListener('click', () => {
   if (activeTab === 'favorites') return;
@@ -184,6 +221,7 @@ tabFav.addEventListener('click', () => {
   tabLists.classList.remove('active');
   hideListsPanel(); hideListDetail();
   Player.setFavoritesOnly(true);
+  renderPlaylist();
 });
 tabLists.addEventListener('click', () => {
   if (activeTab === 'lists') return;
@@ -274,20 +312,20 @@ async function renderAdminList() {
       <div class="admin-actions" ${selectMode ? 'style="display:none"' : ''}>
         <button class="admin-btn add-list-btn" data-id="${t.id}" title="Add to playlist"><i class="ti ti-list-plus"></i></button>
         <button class="admin-btn edit-btn"     data-id="${t.id}"><i class="ti ti-pencil"></i></button>
-        <button class="admin-btn delete delete-btn" data-id="${t.id}"><i class="ti ti-trash"></i></button>
+        <button class="admin-btn delete-action-btn" data-id="${t.id}"><i class="ti ti-trash"></i></button>
       </div>
     </div>`;
   }).join('');
 
   adminList.querySelectorAll('.admin-item').forEach(item => {
     item.addEventListener('click', (e) => {
-      if (e.target.closest('.edit-btn') || e.target.closest('.delete-btn') || e.target.closest('.add-list-btn')) return;
+      if (e.target.closest('.edit-btn') || e.target.closest('.delete-action-btn') || e.target.closest('.add-list-btn')) return;
       if (selectMode) toggleSelectItem(parseInt(item.dataset.id, 10));
     });
   });
   adminList.querySelectorAll('.edit-btn').forEach(b =>
     b.addEventListener('click', () => openRenameModal(parseInt(b.dataset.id, 10))));
-  adminList.querySelectorAll('.delete-btn').forEach(b =>
+  adminList.querySelectorAll('.delete-action-btn').forEach(b =>
     b.addEventListener('click', () => deleteSong(parseInt(b.dataset.id, 10))));
   adminList.querySelectorAll('.add-list-btn').forEach(b =>
     b.addEventListener('click', () => openAddToListModal(parseInt(b.dataset.id, 10))));
@@ -314,7 +352,7 @@ fileInput.addEventListener('change', async () => {
     added++;
   }
   fileInput.value = '';
-  if (dups.length)  showToast(`Already exists: ${dups.join(', ')}`, 4000);
+  if (dups.length) showToast(`Already exists: ${dups.join(', ')}`, 4000);
   if (added > 0) {
     await Player.refreshLibrary();
     renderAdminList();
@@ -369,16 +407,18 @@ modalSave.addEventListener('click', async () => {
 });
 
 /* ── Sleep Timer UI ───────────────────── */
-const btnSleepOpen     = $('btn-sleep');
-const modalSleep       = $('modal-sleep');
+const btnSleepOpen      = $('btn-sleep');
+const modalSleep        = $('modal-sleep');
 const modalSleepCancel = $('modal-sleep-cancel');
 const sleepCustomInput = $('sleep-custom-input');
 const sleepCustomSet   = $('sleep-custom-set');
 
-btnSleepOpen.addEventListener('click', () => {
-  if (SleepTimer.active) { SleepTimer.cancel(); showToast('Sleep timer cancelled'); return; }
-  modalSleep.hidden = false;
-});
+if (btnSleepOpen) {
+  btnSleepOpen.addEventListener('click', () => {
+    if (window.SleepTimer && SleepTimer.active) { SleepTimer.cancel(); showToast('Sleep timer cancelled'); return; }
+    modalSleep.hidden = false;
+  });
+}
 modalSleepCancel.addEventListener('click', () => { modalSleep.hidden = true; });
 modalSleep.addEventListener('click', e => { if (e.target === modalSleep) modalSleep.hidden = true; });
 document.querySelectorAll('.sleep-opt-btn').forEach(btn => {
@@ -497,10 +537,10 @@ importFileInput.addEventListener('change', async () => {
 });
 
 /* ── Playlists ─────────────────────────── */
-const listsPanel     = $('lists-panel');
-const listsGrid      = $('lists-grid');
-const btnNewList     = $('btn-new-list');
-const listDetail     = $('list-detail');
+const listsPanel      = $('lists-panel');
+const listsGrid       = $('lists-grid');
+const btnNewList      = $('btn-new-list');
+const listDetail      = $('list-detail');
 const listBack       = $('list-back');
 const listDetailName = $('list-detail-name');
 const listDeleteBtn  = $('list-delete');
@@ -570,17 +610,17 @@ function renderListDetail(pl) {
         <div class="pl-title">${escHtml(t.title || 'Unknown')}</div>
         <div class="pl-artist">${escHtml(t.artist || 'Unknown')}</div>
       </div>
-      <button class="admin-btn delete remove-from-list-btn" data-id="${t.id}" title="Remove from list"><i class="ti ti-x"></i></button>
+      <button class="admin-btn delete-item-list-btn" data-id="${t.id}" title="Remove from list"><i class="ti ti-x"></i></button>
       <span class="pl-dur">${t.duration ? Player.formatTime(t.duration) : '—'}</span>
     </div>`;
   }).join('');
   listDetailTracks.querySelectorAll('.playlist-item').forEach(el => {
     el.addEventListener('click', (e) => {
-      if (e.target.closest('.remove-from-list-btn')) return;
+      if (e.target.closest('.delete-item-list-btn')) return;
       Player.playById(parseInt(el.dataset.id, 10));
     });
   });
-  listDetailTracks.querySelectorAll('.remove-from-list-btn').forEach(btn => {
+  listDetailTracks.querySelectorAll('.delete-item-list-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       await dbRemoveTrackFromPlaylist(activeListId, parseInt(btn.dataset.id, 10));
@@ -649,6 +689,7 @@ async function openAddToListModal(trackId) {
   modalAddToList.hidden = false;
 }
 addToListCancel.addEventListener('click', () => { modalAddToList.hidden = true; });
+modalAddToList.hidden = false;
 modalAddToList.addEventListener('click', e => { if (e.target === modalAddToList) modalAddToList.hidden = true; });
 
 /* ── Persistent Storage ───────────────── */
@@ -665,12 +706,13 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/* ── Init ─────────────────────────────── */
+/* ── Init (Fix Initial Empty List) ────── */
 (async () => {
   Player.setupMediaSession();
-  await Player.loadLibrary();
-  renderPlaylist();
-  // Cargar letras en background para el widget inline
+  await Player.loadLibrary(); // Esperar de forma síncrona que cargue la DB
+  renderPlaylist();          // Pintar la lista de reproducción inmediatamente después
+  renderAdminList();         // Garantizar hidratación de la lista de configuración
+  
   const t = Player.currentTrack();
   if (t) loadLyricsBackground(t);
 })();
@@ -679,32 +721,38 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 
-/* ── Lyrics screen ────────────────────── */
+/* ── Lyrics Screen & Fullscreen System ── */
 const screenLyrics      = $('screen-lyrics');
 const btnLyrics         = $('btn-lyrics');
 const lyricsClose       = $('lyrics-close');
 const lyricsLines       = $('lyrics-lines');
-const lyricsLoading     = $('lyrics-loading');
+const lyricsLoading      = $('lyrics-loading');
 const lyricsNotFound    = $('lyrics-not-found');
 const lyricsNoTrack     = $('lyrics-no-track');
 const lyricsTrackTitle  = $('lyrics-track-title');
 const lyricsTrackArtist = $('lyrics-track-artist');
-const lyricsPFill       = $('lyrics-progress-fill');
-const lyricsCurrent     = $('lyrics-time-current');
-const lyricsTotal       = $('lyrics-time-total');
+const lyricsPFill        = $('lyrics-progress-fill');
+const lyricsCurrent      = $('lyrics-time-current');
+const lyricsTotal        = $('lyrics-time-total');
 const lyricsPlayIcon    = $('lyrics-play-icon');
 const lyricsProgressWrap= $('lyrics-progress-wrap');
 const lyricsUploadBtn   = $('lyrics-upload-btn');
 const lyricsUploadBtn2  = $('lyrics-upload-btn2');
 const lyricsDeleteBtn   = $('lyrics-delete-btn');
 const lrcFileInput      = $('lrc-file-input');
+const lyricsControlsBar = $('screen-lyrics')?.querySelector('.lyrics-controls'); // El contenedor inferior
 
 let lyricsVisible = false;
+let controlsTimeout = null;
 
 function showLyricsScreen() {
   screenLyrics.classList.add('active');
   lyricsVisible = true;
   btnLyrics.classList.add('lyrics-on');
+  
+  // REGLA: Al iniciar la pantalla, los controles visuales SIEMPRE deben estar visibles.
+  showLyricsControls();
+  
   const t = Player.currentTrack();
   if (t) loadLyricsForTrack(t);
 }
@@ -713,6 +761,7 @@ function hideLyricsScreen() {
   screenLyrics.classList.remove('active');
   lyricsVisible = false;
   btnLyrics.classList.remove('lyrics-on');
+  resetControlsAutohide();
 }
 
 btnLyrics.addEventListener('click', () => {
@@ -721,63 +770,64 @@ btnLyrics.addEventListener('click', () => {
 });
 lyricsClose.addEventListener('click', hideLyricsScreen);
 
+// Gestión táctil inteligente para ocultar/regresar controles en Pantalla Completa
+function showLyricsControls() {
+  if (lyricsControlsBar) lyricsControlsBar.classList.remove('hidden-fullscreen');
+  resetControlsAutohide();
+  // Se ocultan solos tras 5 segundos de inactividad únicamente si está reproduciendo
+  if (Player.playing) {
+    controlsTimeout = setTimeout(() => {
+      if (lyricsControlsBar) lyricsControlsBar.classList.add('hidden-fullscreen');
+    }, 5000);
+  }
+}
+
+function resetControlsAutohide() {
+  if (controlsTimeout) clearTimeout(controlsTimeout);
+}
+
+// Al tocar cualquier parte de la pantalla de letras, los controles regresan de inmediato
+if (screenLyrics) {
+  screenLyrics.addEventListener('click', (e) => {
+    // Si tocó un botón interactivo, no disparamos el toggle
+    if (e.target.closest('button') || e.target.closest('.lyrics-progress-wrap') || e.target.closest('.lyric-line')) return;
+    showLyricsControls();
+  });
+}
+
 // Mini player controls in lyrics screen
-$('lyrics-prev').addEventListener('click', () => Player.prev());
-$('lyrics-next').addEventListener('click', () => Player.next(true));
-$('lyrics-play').addEventListener('click', () => Player.togglePlay());
+$('lyrics-prev').addEventListener('click', (e) => { e.stopPropagation(); Player.prev(); showLyricsControls(); });
+$('lyrics-next').addEventListener('click', (e) => { e.stopPropagation(); Player.next(true); showLyricsControls(); });
+$('lyrics-play').addEventListener('click', (e) => { e.stopPropagation(); Player.togglePlay(); showLyricsControls(); });
 
 lyricsProgressWrap.addEventListener('click', (e) => {
+  e.stopPropagation();
   const rect = lyricsProgressWrap.getBoundingClientRect();
   Player.seek(Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1));
+  showLyricsControls();
 });
 
-// Update mini player progress from main player
-Player.onProgress = (ratio, current, total) => {
-  const pct = (ratio * 100).toFixed(2) + '%';
-  progressFill.style.width = pct;
-  progressThumb.style.left = pct;
-  timeCurrent.textContent  = Player.formatTime(current);
-  timeTotal.textContent    = Player.formatTime(total);
-  // Lyrics mini player
-  lyricsPFill.style.width  = pct;
-  lyricsCurrent.textContent = Player.formatTime(current);
-  lyricsTotal.textContent   = Player.formatTime(total);
-  // Sync lyrics
-  Lyrics.sync(current);
-};
-
-Player.onPlayState = (playing) => {
-  playIcon.className      = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
-  lyricsPlayIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
-};
-
-// Load lyrics when track changes
-Player.onTrackChange = (track) => {
-  trackTitle.textContent  = track ? (track.title  || 'Unknown') : 'No track loaded';
-  trackArtist.textContent = track ? (track.artist || 'Unknown') : 'Add songs to get started';
-  renderPlaylist();
-  Lyrics.clear();
-  resetInlineLyrics();
-  if (lyricsVisible && track) loadLyricsForTrack(track);
-  else if (lyricsVisible) showLyricsState('no-track');
-  // Cargar letras en background para el widget inline aunque la pantalla no esté abierta
-  if (track) loadLyricsBackground(track);
-};
-
 function resetInlineLyrics() {
-  $('inline-prev-line').textContent   = '';
-  $('inline-active-line').textContent = '';
-  $('inline-next-line').textContent   = '';
-  $('inline-no-lyrics').classList.remove('hidden');
+  const prevEl   = $('inline-prev-line');
+  const activeEl = $('inline-active-line');
+  const nextEl   = $('inline-next-line');
+  const noLyrics = $('inline-no-lyrics');
+  
+  if (prevEl) prevEl.textContent = '';
+  if (activeEl) activeEl.textContent = '';
+  if (nextEl) nextEl.textContent = '';
+  if (noLyrics) noLyrics.classList.remove('hidden');
 }
 
 async function loadLyricsBackground(track) {
   const result = await Lyrics.load(track.id, track.title, track.artist);
   const noLyrics = $('inline-no-lyrics');
-  if (result === 'found' || result === 'cached') {
-    noLyrics.classList.add('hidden');
-  } else {
-    noLyrics.classList.remove('hidden');
+  if (noLyrics) {
+    if (result === 'found' || result === 'cached') {
+      noLyrics.classList.add('hidden');
+    } else {
+      noLyrics.classList.remove('hidden');
+    }
   }
 }
 
@@ -812,74 +862,39 @@ function renderLyricsLines() {
 
   // Tap a line → seek to that time
   lyricsLines.querySelectorAll('.lyric-line').forEach((el, i) => {
-    el.addEventListener('click', () => {
-      Player.seek(Lyrics.lines[i].time / document.getElementById('audio').duration);
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const audioEl = document.getElementById('audio');
+      if (audioEl && audioEl.duration) {
+        Player.seek(Lyrics.lines[i].time / audioEl.duration);
+      }
+      showLyricsControls();
     });
   });
 }
 
-// When active line changes — highlight + scroll (pantalla lyrics)
-// Y también actualizar el widget inline en el player principal
+// Line highlighters + Cascade updates
 Lyrics.onLine = (idx, lines) => {
-  // ── Inline lyrics widget ──────────────
   const prevEl   = $('inline-prev-line');
   const activeEl = $('inline-active-line');
   const nextEl   = $('inline-next-line');
   const noLyrics = $('inline-no-lyrics');
 
   if (idx >= 0 && lines.length) {
-    noLyrics.classList.add('hidden');
-    prevEl.textContent   = idx > 0              ? lines[idx - 1].text : '';
-    activeEl.textContent = lines[idx].text;
-    nextEl.textContent   = idx < lines.length-1 ? lines[idx + 1].text : '';
+    if (noLyrics) noLyrics.classList.add('hidden');
+    if (prevEl) prevEl.textContent = idx > 0 ? lines[idx - 1].text : '';
+    if (activeEl) activeEl.textContent = lines[idx].text;
+    if (nextEl) nextEl.textContent = idx < lines.length - 1 ? lines[idx + 1].text : '';
   }
 
-  // ── Pantalla lyrics completa ──────────
-  if (!lyricsVisible) return;
-  const els = lyricsLines.querySelectorAll('.lyric-line');
-  els.forEach((el, i) => {
-    el.classList.toggle('active', i === idx);
-    el.classList.toggle('past',   i < idx);
-  });
-  if (idx >= 0 && els[idx]) {
-    els[idx].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  // Sincronización visual e iluminación dentro de la pantalla completa
+  if (lyricsVisible && lyricsLines) {
+    lyricsLines.querySelectorAll('.lyric-line').forEach((el, i) => {
+      el.classList.toggle('active', i === idx);
+    });
+    const activeLineEl = lyricsLines.querySelector('.lyric-line.active');
+    if (activeLineEl) {
+      activeLineEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
   }
 };
-
-// Tocar el widget inline abre la pantalla de letras
-document.getElementById('inline-lyrics').addEventListener('click', () => {
-  if (Player.currentTrack()) showLyricsScreen();
-});
-
-/* ── Upload .lrc file ── */
-function handleLrcUpload() { lrcFileInput.click(); }
-lyricsUploadBtn.addEventListener('click',  handleLrcUpload);
-lyricsUploadBtn2.addEventListener('click', handleLrcUpload);
-
-lrcFileInput.addEventListener('change', async () => {
-  const file = lrcFileInput.files[0];
-  if (!file) return;
-  const text  = await file.text();
-  const track = Player.currentTrack();
-  if (!track) return;
-  const ok = await Lyrics.saveManual(track.id, text);
-  lrcFileInput.value = '';
-  if (ok) {
-    renderLyricsLines();
-    lyricsDeleteBtn.style.display = '';
-    showToast('Lyrics loaded!');
-  } else {
-    showToast('Could not parse .lrc file');
-  }
-});
-
-// Delete lyrics
-lyricsDeleteBtn.addEventListener('click', async () => {
-  const track = Player.currentTrack();
-  if (!track) return;
-  if (!confirm('Delete lyrics for this song?')) return;
-  await Lyrics.remove(track.id);
-  showLyricsState('not-found');
-  lyricsDeleteBtn.style.display = 'none';
-  showToast('Lyrics deleted');
-});
