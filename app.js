@@ -46,6 +46,9 @@ const toastEl        = $('toast');
 let activeTab   = 'all';
 let renamingId  = null;
 let toastTimer  = null;
+let selectMode  = false;
+let selectedIds = new Set();
+let activeListId = null; // id of currently open playlist
 
 /* ── Toast ───────────────────────────── */
 function showToast(msg, ms = 2500) {
@@ -162,23 +165,39 @@ searchInput.addEventListener('input', () => {
 });
 
 /* ── Tabs ─────────────────────────────── */
+const tabLists = $('tab-lists');
+
 tabAll.addEventListener('click', () => {
   if (activeTab === 'all') return;
-  activeTab = 'all';
+  activeTab = 'all'; activeListId = null;
   tabAll.classList.add('active');
   tabFav.classList.remove('active');
+  tabLists.classList.remove('active');
+  hideListsPanel(); hideListDetail();
   Player.setFavoritesOnly(false);
 });
 tabFav.addEventListener('click', () => {
   if (activeTab === 'favorites') return;
-  activeTab = 'favorites';
+  activeTab = 'favorites'; activeListId = null;
   tabFav.classList.add('active');
   tabAll.classList.remove('active');
+  tabLists.classList.remove('active');
+  hideListsPanel(); hideListDetail();
   Player.setFavoritesOnly(true);
+});
+tabLists.addEventListener('click', () => {
+  if (activeTab === 'lists') return;
+  activeTab = 'lists'; activeListId = null;
+  tabLists.classList.add('active');
+  tabAll.classList.remove('active');
+  tabFav.classList.remove('active');
+  Player.setFavoritesOnly(false);
+  showListsPanel();
 });
 
 /* ── Playlist ─────────────────────────── */
 function renderPlaylist() {
+  if (activeTab === 'lists') { renderListsPanel(); return; }
   const current = Player.currentTrack();
   let display   = [...Player.tracks];
   if (activeTab === 'favorites') display = display.filter(t => t.favorite === true);
@@ -243,22 +262,35 @@ async function renderAdminList() {
   adminSize.textContent  = `${(size / 1024 / 1024).toFixed(1)} MB used`;
   emptyState.classList.toggle('visible', tracks.length === 0);
   if (!tracks.length) { adminList.innerHTML = ''; return; }
-  adminList.innerHTML = tracks.map(t => `
-    <div class="admin-item" data-id="${t.id}">
+  adminList.innerHTML = tracks.map(t => {
+    const checked = selectedIds.has(t.id);
+    return `<div class="admin-item ${selectMode ? 'selectable' : ''} ${checked ? 'selected' : ''}" data-id="${t.id}">
+      ${selectMode ? `<div class="select-checkbox ${checked ? 'checked' : ''}"><i class="ti ti-check"></i></div>` : ''}
       <div class="admin-thumb"><i class="ti ti-music"></i></div>
       <div class="admin-info-col">
         <div class="admin-title">${escHtml(t.title  || 'Unknown')}</div>
         <div class="admin-artist">${escHtml(t.artist || 'Unknown')}</div>
       </div>
-      <div class="admin-actions">
-        <button class="admin-btn edit-btn"   data-id="${t.id}"><i class="ti ti-pencil"></i></button>
+      <div class="admin-actions" ${selectMode ? 'style="display:none"' : ''}>
+        <button class="admin-btn add-list-btn" data-id="${t.id}" title="Add to playlist"><i class="ti ti-list-plus"></i></button>
+        <button class="admin-btn edit-btn"     data-id="${t.id}"><i class="ti ti-pencil"></i></button>
         <button class="admin-btn delete delete-btn" data-id="${t.id}"><i class="ti ti-trash"></i></button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+
+  adminList.querySelectorAll('.admin-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.edit-btn') || e.target.closest('.delete-btn') || e.target.closest('.add-list-btn')) return;
+      if (selectMode) toggleSelectItem(parseInt(item.dataset.id, 10));
+    });
+  });
   adminList.querySelectorAll('.edit-btn').forEach(b =>
     b.addEventListener('click', () => openRenameModal(parseInt(b.dataset.id, 10))));
   adminList.querySelectorAll('.delete-btn').forEach(b =>
     b.addEventListener('click', () => deleteSong(parseInt(b.dataset.id, 10))));
+  adminList.querySelectorAll('.add-list-btn').forEach(b =>
+    b.addEventListener('click', () => openAddToListModal(parseInt(b.dataset.id, 10))));
 }
 
 /* ── File import ──────────────────────── */
@@ -365,7 +397,270 @@ sleepCustomSet.addEventListener('click', () => {
   showToast(`Sleep timer: ${val} min`);
 });
 
-/* ── Util ─────────────────────────────── */
+/* ── Multi-select ─────────────────────── */
+const btnSelect      = $('btn-select');
+const selectBar      = $('select-bar');
+const selectCount    = $('select-count');
+const selectAllBtn   = $('select-all-btn');
+const selectDeleteBtn= $('select-delete-btn');
+const selectCancelBtn= $('select-cancel-btn');
+
+btnSelect.addEventListener('click', () => {
+  selectMode = !selectMode;
+  selectedIds.clear();
+  btnSelect.classList.toggle('on', selectMode);
+  selectBar.hidden = !selectMode;
+  renderAdminList();
+});
+
+function toggleSelectItem(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  selectCount.textContent = `${selectedIds.size} selected`;
+  renderAdminList();
+}
+
+selectAllBtn.addEventListener('click', () => {
+  if (selectedIds.size === Player.tracks.length) {
+    selectedIds.clear();
+  } else {
+    Player.tracks.forEach(t => selectedIds.add(t.id));
+  }
+  selectCount.textContent = `${selectedIds.size} selected`;
+  renderAdminList();
+});
+
+selectDeleteBtn.addEventListener('click', async () => {
+  if (!selectedIds.size) return;
+  if (!confirm(`Delete ${selectedIds.size} song${selectedIds.size > 1 ? 's' : ''}?`)) return;
+  for (const id of selectedIds) {
+    await dbDeleteTrack(id);
+    await dbDeleteLyrics(id);
+  }
+  selectedIds.clear();
+  selectMode = false;
+  selectBar.hidden = true;
+  btnSelect.classList.remove('on');
+  await Player.refreshLibrary();
+  renderAdminList();
+  renderPlaylist();
+  showToast('Songs removed');
+});
+
+selectCancelBtn.addEventListener('click', () => {
+  selectMode = false;
+  selectedIds.clear();
+  selectBar.hidden = true;
+  btnSelect.classList.remove('on');
+  renderAdminList();
+});
+
+/* ── Export / Import ──────────────────── */
+const btnExport      = $('btn-export');
+const btnImport      = $('btn-import');
+const importFileInput= $('import-file-input');
+
+btnExport.addEventListener('click', async () => {
+  if (!Player.tracks.length) { showToast('No songs to export'); return; }
+  showToast('Exporting… this may take a moment', 8000);
+  try {
+    const json = await dbExportLibrary();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `aurora-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Library exported!');
+  } catch (e) {
+    showToast('Export failed: ' + e.message);
+  }
+});
+
+btnImport.addEventListener('click', () => importFileInput.click());
+importFileInput.addEventListener('change', async () => {
+  const file = importFileInput.files[0];
+  if (!file) return;
+  importFileInput.value = '';
+  showToast('Importing… please wait', 10000);
+  try {
+    const text = await file.text();
+    const { imported, skipped } = await dbImportLibrary(text);
+    await Player.refreshLibrary();
+    renderAdminList();
+    renderPlaylist();
+    showToast(`Imported ${imported} songs${skipped ? `, ${skipped} already existed` : ''}`);
+  } catch (e) {
+    showToast('Import failed: ' + e.message);
+  }
+});
+
+/* ── Playlists ─────────────────────────── */
+const listsPanel     = $('lists-panel');
+const listsGrid      = $('lists-grid');
+const btnNewList     = $('btn-new-list');
+const listDetail     = $('list-detail');
+const listBack       = $('list-back');
+const listDetailName = $('list-detail-name');
+const listDeleteBtn  = $('list-delete');
+const listDetailTracks = $('list-detail-tracks');
+const listEmpty      = $('list-empty');
+const modalNewList   = $('modal-new-list');
+const newListName    = $('new-list-name');
+const newListCancel  = $('new-list-cancel');
+const newListSave    = $('new-list-save');
+const modalAddToList = $('modal-add-to-list');
+const addToListOpts  = $('add-to-list-options');
+const addToListCancel= $('add-to-list-cancel');
+
+function showListsPanel() {
+  playlistEl.style.display = 'none';
+  emptyFavorites.hidden = true;
+  listDetail.hidden = true;
+  listsPanel.hidden = false;
+  renderListsPanel();
+}
+function hideListsPanel() {
+  listsPanel.hidden = true;
+  playlistEl.style.display = '';
+}
+function hideListDetail() {
+  listDetail.hidden = true;
+}
+
+async function renderListsPanel() {
+  const lists = await dbGetAllPlaylists();
+  playlistCount.textContent = `${lists.length} list${lists.length !== 1 ? 's' : ''}`;
+  if (!lists.length) {
+    listsGrid.innerHTML = `<div class="lists-empty"><i class="ti ti-list" style="font-size:36px;opacity:0.25;margin-bottom:8px;"></i><p style="font-size:13px;color:var(--text3);">No playlists yet</p></div>`;
+    return;
+  }
+  listsGrid.innerHTML = lists.map(pl => `
+    <div class="list-card" data-id="${pl.id}">
+      <div class="list-card-icon"><i class="ti ti-playlist"></i></div>
+      <div class="list-card-name">${escHtml(pl.name)}</div>
+      <div class="list-card-count">${pl.trackIds.length} song${pl.trackIds.length !== 1 ? 's' : ''}</div>
+    </div>`).join('');
+  listsGrid.querySelectorAll('.list-card').forEach(card => {
+    card.addEventListener('click', () => openListDetail(parseInt(card.dataset.id, 10)));
+  });
+}
+
+async function openListDetail(id) {
+  activeListId = id;
+  const pl = await dbGetPlaylist(id);
+  if (!pl) return;
+  listDetailName.textContent = pl.name;
+  listsPanel.hidden = true;
+  listDetail.hidden = false;
+  renderListDetail(pl);
+}
+
+function renderListDetail(pl) {
+  const tracks = pl.trackIds.map(tid => Player.tracks.find(t => t.id === tid)).filter(Boolean);
+  listEmpty.hidden = tracks.length > 0;
+  listDetailTracks.style.display = tracks.length ? '' : 'none';
+  const current = Player.currentTrack();
+  listDetailTracks.innerHTML = tracks.map((t, idx) => {
+    const isActive = t.id === current?.id;
+    return `<div class="playlist-item ${isActive ? 'active' : ''}" data-id="${t.id}" role="button" tabindex="0">
+      ${isActive ? `<div class="playing-bars"><span></span><span></span><span></span></div>` : `<span class="pl-num">${idx + 1}</span>`}
+      <div class="pl-info">
+        <div class="pl-title">${escHtml(t.title || 'Unknown')}</div>
+        <div class="pl-artist">${escHtml(t.artist || 'Unknown')}</div>
+      </div>
+      <button class="admin-btn delete remove-from-list-btn" data-id="${t.id}" title="Remove from list"><i class="ti ti-x"></i></button>
+      <span class="pl-dur">${t.duration ? Player.formatTime(t.duration) : '—'}</span>
+    </div>`;
+  }).join('');
+  listDetailTracks.querySelectorAll('.playlist-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.remove-from-list-btn')) return;
+      Player.playById(parseInt(el.dataset.id, 10));
+    });
+  });
+  listDetailTracks.querySelectorAll('.remove-from-list-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await dbRemoveTrackFromPlaylist(activeListId, parseInt(btn.dataset.id, 10));
+      const updated = await dbGetPlaylist(activeListId);
+      if (updated) renderListDetail(updated);
+    });
+  });
+}
+
+listBack.addEventListener('click', () => {
+  listDetail.hidden = true;
+  activeListId = null;
+  showListsPanel();
+});
+
+listDeleteBtn.addEventListener('click', async () => {
+  if (!activeListId) return;
+  if (!confirm('Delete this playlist?')) return;
+  await dbDeletePlaylist(activeListId);
+  activeListId = null;
+  listDetail.hidden = true;
+  showListsPanel();
+  showToast('Playlist deleted');
+});
+
+// New playlist modal
+btnNewList.addEventListener('click', () => {
+  newListName.value = '';
+  modalNewList.hidden = false;
+  newListName.focus();
+});
+newListCancel.addEventListener('click', () => { modalNewList.hidden = true; });
+modalNewList.addEventListener('click', e => { if (e.target === modalNewList) modalNewList.hidden = true; });
+newListSave.addEventListener('click', async () => {
+  const name = newListName.value.trim();
+  if (!name) { showToast('Enter a playlist name'); return; }
+  await dbCreatePlaylist(name);
+  modalNewList.hidden = true;
+  renderListsPanel();
+  showToast(`Playlist "${name}" created`);
+});
+newListName.addEventListener('keydown', e => { if (e.key === 'Enter') newListSave.click(); });
+
+// Add to playlist modal
+let addToListTrackId = null;
+async function openAddToListModal(trackId) {
+  addToListTrackId = trackId;
+  const lists = await dbGetAllPlaylists();
+  if (!lists.length) {
+    showToast('No playlists yet — create one in LISTS tab');
+    return;
+  }
+  addToListOpts.innerHTML = lists.map(pl => `
+    <button class="add-to-list-opt" data-id="${pl.id}">
+      <i class="ti ti-playlist"></i>
+      <span>${escHtml(pl.name)}</span>
+      <span style="font-size:11px;color:var(--text3);margin-left:auto;">${pl.trackIds.length} songs</span>
+    </button>`).join('');
+  addToListOpts.querySelectorAll('.add-to-list-opt').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await dbAddTrackToPlaylist(parseInt(btn.dataset.id, 10), addToListTrackId);
+      modalAddToList.hidden = true;
+      showToast('Added to playlist!');
+    });
+  });
+  modalAddToList.hidden = false;
+}
+addToListCancel.addEventListener('click', () => { modalAddToList.hidden = true; });
+modalAddToList.addEventListener('click', e => { if (e.target === modalAddToList) modalAddToList.hidden = true; });
+
+/* ── Persistent Storage ───────────────── */
+(async () => {
+  if (navigator.storage && navigator.storage.persist) {
+    const already = await navigator.storage.persisted();
+    if (!already) {
+      const granted = await navigator.storage.persist();
+      if (granted) console.log('[Aurora] Persistent storage granted');
+    }
+  }
+})();
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -381,19 +676,9 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 
-/* ── Lyrics inline v29 ───────────────── */
-const btnLyrics      = $('btn-lyrics');
-const eqArtwork      = $('eq-artwork');
-const inlineLyrics   = $('inline-lyrics');
-const inlineStatus   = $('inline-status');
-const inlineLines    = $('inline-lines');
-const inlineNofound  = $('inline-nofound');
-const btnFullLyrics  = $('btn-full-lyrics');
-const inlineUpload   = $('inline-upload-btn');
-const lrcFileInput   = $('lrc-file-input');
-
-// Full screen lyrics (keep existing screen-lyrics for full view)
+/* ── Lyrics screen ────────────────────── */
 const screenLyrics      = $('screen-lyrics');
+const btnLyrics         = $('btn-lyrics');
 const lyricsClose       = $('lyrics-close');
 const lyricsLines       = $('lyrics-lines');
 const lyricsLoading     = $('lyrics-loading');
@@ -409,82 +694,79 @@ const lyricsProgressWrap= $('lyrics-progress-wrap');
 const lyricsUploadBtn   = $('lyrics-upload-btn');
 const lyricsUploadBtn2  = $('lyrics-upload-btn2');
 const lyricsDeleteBtn   = $('lyrics-delete-btn');
+const lrcFileInput      = $('lrc-file-input');
 
-let lyricsInlineOn  = false;  // inline mode
-let lyricsFullOn    = false;  // fullscreen mode
+let lyricsVisible = false;
 
-/* ── Toggle inline lyrics (replaces EQ bars) ── */
-btnLyrics.addEventListener('click', () => {
-  lyricsInlineOn = !lyricsInlineOn;
-  btnLyrics.classList.toggle('on', lyricsInlineOn);
-  eqArtwork.hidden   = lyricsInlineOn;
-  inlineLyrics.hidden = !lyricsInlineOn;
-  if (lyricsInlineOn) {
-    const t = Player.currentTrack();
-    if (t) loadInlineLyrics(t);
-    else { inlineStatus.textContent = 'Play a song to see lyrics'; }
-  }
-});
-
-/* ── Open full screen lyrics ── */
-btnFullLyrics.addEventListener('click', () => {
-  lyricsFullOn = true;
+function showLyricsScreen() {
   screenLyrics.classList.add('active');
+  lyricsVisible = true;
+  btnLyrics.classList.add('lyrics-on');
   const t = Player.currentTrack();
-  if (t) loadFullLyrics(t);
-});
+  if (t) loadLyricsForTrack(t);
+}
 
-lyricsClose.addEventListener('click', () => {
+function hideLyricsScreen() {
   screenLyrics.classList.remove('active');
-  lyricsFullOn = false;
+  lyricsVisible = false;
+  btnLyrics.classList.remove('lyrics-on');
+}
+
+btnLyrics.addEventListener('click', () => {
+  if (lyricsVisible) hideLyricsScreen();
+  else showLyricsScreen();
+});
+lyricsClose.addEventListener('click', hideLyricsScreen);
+
+// Mini player controls in lyrics screen
+$('lyrics-prev').addEventListener('click', () => Player.prev());
+$('lyrics-next').addEventListener('click', () => Player.next(true));
+$('lyrics-play').addEventListener('click', () => Player.togglePlay());
+
+lyricsProgressWrap.addEventListener('click', (e) => {
+  const rect = lyricsProgressWrap.getBoundingClientRect();
+  Player.seek(Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1));
 });
 
-/* ── Load lyrics for inline display ── */
-async function loadInlineLyrics(track) {
-  inlineStatus.textContent = 'Searching...';
-  inlineStatus.style.display = 'block';
-  inlineLines.innerHTML = '';
-  inlineNofound.hidden = true;
-  btnFullLyrics.hidden = true;
+// Update mini player progress from main player
+Player.onProgress = (ratio, current, total) => {
+  const pct = (ratio * 100).toFixed(2) + '%';
+  progressFill.style.width = pct;
+  progressThumb.style.left = pct;
+  timeCurrent.textContent  = Player.formatTime(current);
+  timeTotal.textContent    = Player.formatTime(total);
+  // Lyrics mini player
+  lyricsPFill.style.width  = pct;
+  lyricsCurrent.textContent = Player.formatTime(current);
+  lyricsTotal.textContent   = Player.formatTime(total);
+  // Sync lyrics
+  Lyrics.sync(current);
+};
 
-  const result = await Lyrics.load(track.id, track.title, track.artist);
+Player.onPlayState = (playing) => {
+  playIcon.className      = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+  lyricsPlayIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+};
 
-  if (result === 'found' || result === 'cached') {
-    inlineStatus.style.display = 'none';
-    btnFullLyrics.hidden = false;
-    updateInlineDisplay();
-  } else {
-    inlineStatus.style.display = 'none';
-    inlineNofound.hidden = false;
-  }
-}
+// Load lyrics when track changes
+Player.onTrackChange = (track) => {
+  trackTitle.textContent  = track ? (track.title  || 'Unknown') : 'No track loaded';
+  trackArtist.textContent = track ? (track.artist || 'Unknown') : 'Add songs to get started';
+  renderPlaylist();
+  Lyrics.clear();
+  if (lyricsVisible && track) loadLyricsForTrack(track);
+  else if (lyricsVisible) showLyricsState('no-track');
+};
 
-/* ── Update inline: show prev / active / next lines ── */
-function updateInlineDisplay() {
-  if (!lyricsInlineOn || !Lyrics.lines.length) return;
-  const lines = Lyrics.lines;
-  const idx   = Lyrics.activeIdx;
-
-  const items = [];
-  if (idx > 0)             items.push({ text: lines[idx-1].text, cls: '' });
-  if (idx >= 0)            items.push({ text: lines[idx].text,   cls: 'active' });
-  else                     items.push({ text: lines[0].text,     cls: 'near' });
-  if (idx < lines.length-1) items.push({ text: lines[idx+1 >= 0 ? idx+1 : 0].text, cls: 'near' });
-
-  inlineLines.innerHTML = items.map(({ text, cls }) =>
-    `<div class="inline-line ${cls}">${escHtml(text)}</div>`
-  ).join('');
-}
-
-/* ── Load lyrics for full screen ── */
-async function loadFullLyrics(track) {
+async function loadLyricsForTrack(track) {
   lyricsTrackTitle.textContent  = track.title  || 'Unknown';
   lyricsTrackArtist.textContent = track.artist || 'Unknown';
   showLyricsState('loading');
 
   const result = await Lyrics.load(track.id, track.title, track.artist);
+
   if (result === 'found' || result === 'cached') {
-    renderFullLyricsLines();
+    renderLyricsLines();
     lyricsDeleteBtn.style.display = '';
   } else {
     showLyricsState('not-found');
@@ -499,82 +781,37 @@ function showLyricsState(state) {
   lyricsLines.hidden    = state !== 'lines';
 }
 
-function renderFullLyricsLines() {
+function renderLyricsLines() {
   showLyricsState('lines');
   lyricsLines.innerHTML = Lyrics.lines.map((line, i) =>
     `<div class="lyric-line" data-idx="${i}">${escHtml(line.text)}</div>`
   ).join('');
+
+  // Tap a line → seek to that time
   lyricsLines.querySelectorAll('.lyric-line').forEach((el, i) => {
     el.addEventListener('click', () => {
-      const audio = document.getElementById('audio');
-      if (audio.duration) audio.currentTime = Lyrics.lines[i].time;
-      if (audio.paused) audio.play().catch(()=>{});
+      Player.seek(Lyrics.lines[i].time / document.getElementById('audio').duration);
     });
   });
 }
 
-/* ── Progress (main + lyrics fullscreen) ── */
-Player.onProgress = (ratio, current, total) => {
-  const pct = (ratio * 100).toFixed(2) + '%';
-  progressFill.style.width = pct;
-  progressThumb.style.left = pct;
-  timeCurrent.textContent  = Player.formatTime(current);
-  timeTotal.textContent    = Player.formatTime(total);
-  if (lyricsPFill)  lyricsPFill.style.width   = pct;
-  if (lyricsCurrent) lyricsCurrent.textContent = Player.formatTime(current);
-  if (lyricsTotal)   lyricsTotal.textContent   = Player.formatTime(total);
-  Lyrics.sync(current);
-};
-
-Player.onPlayState = (playing) => {
-  playIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
-  if (lyricsPlayIcon) lyricsPlayIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
-};
-
-/* ── Track change ── */
-Player.onTrackChange = (track) => {
-  trackTitle.textContent  = track ? (track.title  || 'Unknown') : 'No track loaded';
-  trackArtist.textContent = track ? (track.artist || 'Unknown') : 'Add songs to get started';
-  renderPlaylist();
-  Lyrics.clear();
-  inlineLines.innerHTML = '';
-  inlineNofound.hidden = true;
-  btnFullLyrics.hidden = true;
-  if (lyricsInlineOn && track) loadInlineLyrics(track);
-  if (lyricsFullOn   && track) loadFullLyrics(track);
-};
-
-/* ── Lyrics sync callback ── */
+// When active line changes — highlight + scroll
 Lyrics.onLine = (idx, lines) => {
-  // Update inline
-  if (lyricsInlineOn) updateInlineDisplay();
-  // Update fullscreen
-  if (lyricsFullOn) {
-    const els = lyricsLines.querySelectorAll('.lyric-line');
-    els.forEach((el, i) => {
-      el.classList.toggle('active', i === idx);
-      el.classList.toggle('past',   i < idx);
-    });
-    if (idx >= 0 && els[idx]) {
-      els[idx].scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
+  if (!lyricsVisible) return;
+  const els = lyricsLines.querySelectorAll('.lyric-line');
+  els.forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+    el.classList.toggle('past',   i < idx);
+  });
+  if (idx >= 0 && els[idx]) {
+    els[idx].scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 };
 
-/* ── Mini player in full screen ── */
-$('lyrics-prev').addEventListener('click', () => Player.prev());
-$('lyrics-next').addEventListener('click', () => Player.next(true));
-$('lyrics-play').addEventListener('click', () => Player.togglePlay());
-lyricsProgressWrap.addEventListener('click', (e) => {
-  const rect = lyricsProgressWrap.getBoundingClientRect();
-  Player.seek(Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1));
-});
-
-/* ── Upload .lrc ── */
+// Upload .lrc file
 function handleLrcUpload() { lrcFileInput.click(); }
-if (inlineUpload)    inlineUpload.addEventListener('click',    handleLrcUpload);
-if (lyricsUploadBtn) lyricsUploadBtn.addEventListener('click', handleLrcUpload);
-if (lyricsUploadBtn2)lyricsUploadBtn2.addEventListener('click',handleLrcUpload);
+lyricsUploadBtn.addEventListener('click',  handleLrcUpload);
+lyricsUploadBtn2.addEventListener('click', handleLrcUpload);
 
 lrcFileInput.addEventListener('change', async () => {
   const file = lrcFileInput.files[0];
@@ -585,15 +822,15 @@ lrcFileInput.addEventListener('change', async () => {
   const ok = await Lyrics.saveManual(track.id, text);
   lrcFileInput.value = '';
   if (ok) {
-    if (lyricsInlineOn) { btnFullLyrics.hidden = false; updateInlineDisplay(); }
-    if (lyricsFullOn)   { renderFullLyricsLines(); lyricsDeleteBtn.style.display = ''; }
+    renderLyricsLines();
+    lyricsDeleteBtn.style.display = '';
     showToast('Lyrics loaded!');
   } else {
     showToast('Could not parse .lrc file');
   }
 });
 
-/* ── Delete lyrics ── */
+// Delete lyrics
 lyricsDeleteBtn.addEventListener('click', async () => {
   const track = Player.currentTrack();
   if (!track) return;
@@ -601,8 +838,5 @@ lyricsDeleteBtn.addEventListener('click', async () => {
   await Lyrics.remove(track.id);
   showLyricsState('not-found');
   lyricsDeleteBtn.style.display = 'none';
-  inlineLines.innerHTML = '';
-  inlineNofound.hidden = false;
-  btnFullLyrics.hidden = true;
   showToast('Lyrics deleted');
 });
