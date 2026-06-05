@@ -37,40 +37,19 @@
     <div id="track-artist" class="track-artist">Add songs to get started</div>
   </div>
 
-  <!-- Visual: EQ bars or inline lyrics -->
-  <div id="visual-wrap" class="visual-wrap">
-
-    <div class="eq-artwork" id="eq-artwork" aria-hidden="true">
-      <div class="eq-bar" style="--d:0.9s"></div>
-      <div class="eq-bar" style="--d:0.7s"></div>
-      <div class="eq-bar" style="--d:1.1s"></div>
-      <div class="eq-bar" style="--d:0.6s"></div>
-      <div class="eq-bar" style="--d:0.8s"></div>
-      <div class="eq-bar" style="--d:0.5s"></div>
-      <div class="eq-bar" style="--d:1.0s"></div>
-      <div class="eq-bar" style="--d:0.75s"></div>
-      <div class="eq-bar" style="--d:0.65s"></div>
-      <div class="eq-bar" style="--d:0.55s"></div>
-      <div class="eq-bar" style="--d:0.85s"></div>
-      <div class="eq-bar" style="--d:0.95s"></div>
-    </div>
-
-    <!-- Inline lyrics zone -->
-    <div id="inline-lyrics" class="inline-lyrics" hidden>
-      <div id="inline-status" class="inline-status"></div>
-      <div id="inline-lines"  class="inline-lines"></div>
-      <div id="inline-nofound" class="inline-nofound" hidden>
-        <p>Lyrics not found</p>
-        <button id="inline-upload-btn" class="inline-upload-btn">
-          <i class="ti ti-upload"></i> Upload .lrc
-        </button>
-      </div>
-      <!-- Full lyrics button -->
-      <button id="btn-full-lyrics" class="btn-full-lyrics" hidden>
-        <i class="ti ti-arrows-maximize"></i> Full
-      </button>
-    </div>
-
+  <div class="eq-artwork" id="eq-artwork" aria-hidden="true">
+    <div class="eq-bar" style="--d:0.9s"></div>
+    <div class="eq-bar" style="--d:0.7s"></div>
+    <div class="eq-bar" style="--d:1.1s"></div>
+    <div class="eq-bar" style="--d:0.6s"></div>
+    <div class="eq-bar" style="--d:0.8s"></div>
+    <div class="eq-bar" style="--d:0.5s"></div>
+    <div class="eq-bar" style="--d:1.0s"></div>
+    <div class="eq-bar" style="--d:0.75s"></div>
+    <div class="eq-bar" style="--d:0.65s"></div>
+    <div class="eq-bar" style="--d:0.55s"></div>
+    <div class="eq-bar" style="--d:0.85s"></div>
+    <div class="eq-bar" style="--d:0.95s"></div>
   </div>
 
   <div class="progress-section">
@@ -96,8 +75,9 @@
 
   <div class="playlist-section">
     <div class="playlist-tabs">
-      <button id="tab-all" class="tab-btn active">ALL</button>
-      <button id="tab-fav" class="tab-btn"><i class="ti ti-heart"></i> FAVORITES</button>
+      <button id="tab-all"   class="tab-btn active">ALL</button>
+      <button id="tab-fav"   class="tab-btn"><i class="ti ti-heart"></i> FAV</button>
+      <button id="tab-lists" class="tab-btn"><i class="ti ti-list"></i> LISTS</button>
       <span id="playlist-count" class="playlist-count">0 songs</span>
     </div>
     <div id="playlist" class="playlist"></div>
@@ -105,6 +85,24 @@
       <i class="ti ti-heart-off"></i>
       <p>No favorites yet</p>
       <p class="empty-sub">Tap <i class="ti ti-heart"></i> on any song</p>
+    </div>
+    <!-- Lists panel -->
+    <div id="lists-panel" class="lists-panel" hidden>
+      <div id="lists-grid" class="lists-grid"></div>
+      <button id="btn-new-list" class="btn-new-list"><i class="ti ti-plus"></i> New playlist</button>
+    </div>
+    <!-- Playlist detail view -->
+    <div id="list-detail" class="list-detail" hidden>
+      <div class="list-detail-header">
+        <button id="list-back" class="icon-btn"><i class="ti ti-arrow-left"></i></button>
+        <span id="list-detail-name" class="list-detail-name">Playlist</span>
+        <button id="list-delete" class="icon-btn" style="color:#ef4444;"><i class="ti ti-trash"></i></button>
+      </div>
+      <div id="list-detail-tracks" class="playlist"></div>
+      <div id="list-empty" class="lyrics-state" hidden>
+        <i class="ti ti-music-off" style="font-size:36px;opacity:0.3;margin-bottom:8px;"></i>
+        <p style="font-size:13px;color:var(--text3);">No songs in this list yet</p>
+      </div>
     </div>
   </div>
 </div>
@@ -168,31 +166,6 @@
   </div>
 </div>
 
-<!-- LYRICS FULLSCREEN -->
-<div id="lyrics-fullscreen" class="lyrics-fullscreen" hidden>
-  <div class="lf-header">
-    <div>
-      <div id="lf-title"  class="lf-title">—</div>
-      <div id="lf-artist" class="lf-artist">—</div>
-    </div>
-    <div style="display:flex;gap:4px;">
-      <button id="lf-upload-btn" class="icon-btn" aria-label="Upload .lrc"><i class="ti ti-upload"></i></button>
-      <button id="lf-close"      class="icon-btn" aria-label="Close"><i class="ti ti-chevron-down"></i></button>
-    </div>
-  </div>
-  <div id="lf-lines" class="lf-lines"></div>
-  <div class="lf-mini">
-    <div class="lf-progress"><div id="lf-fill" class="lf-fill"></div></div>
-    <div class="lf-controls">
-      <button id="lf-prev" class="ctrl-btn"><i class="ti ti-player-skip-back"></i></button>
-      <button id="lf-play" class="play-btn"><i class="ti ti-player-play" id="lf-play-icon"></i></button>
-      <button id="lf-next" class="ctrl-btn"><i class="ti ti-player-skip-forward"></i></button>
-    </div>
-  </div>
-</div>
-
-<input type="file" id="lrc-file-input" accept=".lrc,.txt" hidden/>
-
 <!-- SEARCH OVERLAY -->
 <div id="search-overlay" class="search-overlay" hidden>
   <div class="search-overlay-top">
@@ -207,9 +180,24 @@
   <header class="top-bar">
     <button id="btn-back"     class="icon-btn" aria-label="Back"><i class="ti ti-arrow-left"></i></button>
     <span class="app-name">LIBRARY</span>
-    <button id="btn-add-song" class="icon-btn add-btn" aria-label="Add songs"><i class="ti ti-plus"></i></button>
+    <div style="display:flex;align-items:center;gap:2px;">
+      <button id="btn-import"   class="icon-btn" aria-label="Import library" title="Import backup"><i class="ti ti-database-import"></i></button>
+      <button id="btn-export"   class="icon-btn" aria-label="Export library" title="Export backup"><i class="ti ti-database-export"></i></button>
+      <button id="btn-select"   class="icon-btn" aria-label="Select songs"><i class="ti ti-checkbox"></i></button>
+      <button id="btn-add-song" class="icon-btn add-btn" aria-label="Add songs"><i class="ti ti-plus"></i></button>
+    </div>
   </header>
+  <input type="file" id="import-file-input" accept=".json" hidden />
   <input type="file" id="file-input" accept="audio/*,.mp3,.mp4,.m4a,.ogg,.wav,.flac,.aac" multiple hidden />
+  <!-- Multi-select action bar -->
+  <div id="select-bar" class="select-bar" hidden>
+    <span id="select-count" class="select-count">0 selected</span>
+    <div style="display:flex;gap:8px;">
+      <button id="select-all-btn"    class="modal-btn secondary" style="padding:8px 14px;font-size:13px;">All</button>
+      <button id="select-delete-btn" class="modal-btn primary"   style="padding:8px 14px;font-size:13px;background:#ef4444;"><i class="ti ti-trash"></i> Delete</button>
+      <button id="select-cancel-btn" class="modal-btn secondary" style="padding:8px 14px;font-size:13px;">Cancel</button>
+    </div>
+  </div>
   <div class="admin-info">
     <span id="admin-count">0 songs</span>
     <span id="admin-size">0 MB used</span>
@@ -234,6 +222,28 @@
       <button id="modal-cancel" class="modal-btn secondary">Cancel</button>
       <button id="modal-save"   class="modal-btn primary">Save</button>
     </div>
+  </div>
+</div>
+
+<!-- NEW PLAYLIST MODAL -->
+<div id="modal-new-list" class="modal-overlay" hidden>
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-list" style="color:var(--accent);margin-right:8px;"></i>New Playlist</div>
+    <label class="modal-label">Name</label>
+    <input type="text" id="new-list-name" class="modal-input" placeholder="My playlist" />
+    <div class="modal-actions">
+      <button id="new-list-cancel" class="modal-btn secondary">Cancel</button>
+      <button id="new-list-save"   class="modal-btn primary">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD TO PLAYLIST MODAL -->
+<div id="modal-add-to-list" class="modal-overlay" hidden>
+  <div class="modal-box">
+    <div class="modal-title"><i class="ti ti-list-plus" style="color:var(--accent);margin-right:8px;"></i>Add to Playlist</div>
+    <div id="add-to-list-options" class="add-to-list-options"></div>
+    <button id="add-to-list-cancel" class="modal-btn secondary" style="margin-top:12px;width:100%;">Cancel</button>
   </div>
 </div>
 
