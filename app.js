@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════
-   app.js — UI controller v8 (Definitive)
+   app.js — UI controller v10 (Definitive Fixed)
 ═══════════════════════════════════════ */
 const $ = id => document.getElementById(id);
 
@@ -49,6 +49,7 @@ let toastTimer  = null;
 let selectMode  = false;
 let selectedIds = new Set();
 let activeListId = null; 
+let addToListTrackId = null; 
 
 /* ── Toast ───────────────────────────── */
 function showToast(msg, ms = 2500) {
@@ -248,7 +249,6 @@ async function renderAdminList() {
   adminCount.textContent = `${tracks.length} song${tracks.length !== 1 ? 's' : ''}`;
   adminSize.textContent  = `${(size / 1024 / 1024).toFixed(1)} MB used`;
   
-  // CORRECCIÓN CLAVE: Controla si se muestra el aviso de "Agregar canciones"
   if (emptyState) {
     emptyState.classList.toggle('visible', tracks.length === 0);
   }
@@ -264,7 +264,7 @@ async function renderAdminList() {
         <div class="admin-artist">${escHtml(t.artist || 'Unknown')}</div>
       </div>
       <div class="admin-actions" ${selectMode ? 'style="display:none"' : ''}>
-        <button class="admin-btn add-list-btn" data-id="${t.id}" title="Add to playlist"><i class="ti ti-list-plus"></i></button>
+        <button class="admin-btn add-list-btn" data-track-id="${t.id}" title="Add to playlist"><i class="ti ti-list-plus"></i></button>
         <button class="admin-btn edit-btn"     data-id="${t.id}"><i class="ti ti-pencil"></i></button>
         <button class="admin-btn delete-action-btn" data-id="${t.id}"><i class="ti ti-trash"></i></button>
       </div>
@@ -281,8 +281,15 @@ async function renderAdminList() {
     b.addEventListener('click', () => openRenameModal(parseInt(b.dataset.id, 10))));
   adminList.querySelectorAll('.delete-action-btn').forEach(b =>
     b.addEventListener('click', () => deleteSong(parseInt(b.dataset.id, 10))));
+    
+  // EVENTO CORREGIDO: Extrae de forma segura el atributo de la canción
   adminList.querySelectorAll('.add-list-btn').forEach(b =>
-    b.addEventListener('click', () => openAddToListModal(parseInt(b.dataset.id, 10))));
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const trackId = parseInt(b.getAttribute('data-track-id') || b.dataset.id, 10);
+      openAddToListModal(trackId);
+    })
+  );
 }
 
 /* ── File import ──────────────────────── */
@@ -618,9 +625,12 @@ newListSave.addEventListener('click', async () => {
 });
 newListName.addEventListener('keydown', e => { if (e.key === 'Enter') newListSave.click(); });
 
-// Add to playlist modal
-let addToListTrackId = null;
+// FUNCIÓN CORREGIDA: Sincroniza perfectamente el Id de la canción y de la playlist elegida
 async function openAddToListModal(trackId) {
+  if (!trackId) {
+    showToast('Error: Invalid song selected');
+    return;
+  }
   addToListTrackId = trackId;
   const lists = await dbGetAllPlaylists();
   if (!lists.length) {
@@ -628,16 +638,23 @@ async function openAddToListModal(trackId) {
     return;
   }
   addToListOpts.innerHTML = lists.map(pl => `
-    <button class="add-to-list-opt" data-id="${pl.id}">
+    <button class="add-to-list-opt" data-playlist-id="${pl.id}">
       <i class="ti ti-playlist"></i>
       <span>${escHtml(pl.name)}</span>
       <span style="font-size:11px;color:var(--text3);margin-left:auto;">${pl.trackIds.length} songs</span>
     </button>`).join('');
+    
   addToListOpts.querySelectorAll('.add-to-list-opt').forEach(btn => {
     btn.addEventListener('click', async () => {
-      await dbAddTrackToPlaylist(parseInt(btn.dataset.id, 10), addToListTrackId);
-      modalAddToList.hidden = true;
-      showToast('Added to playlist!');
+      const plId = parseInt(btn.getAttribute('data-playlist-id'), 10);
+      if (plId && addToListTrackId) {
+        await dbAddTrackToPlaylist(plId, addToListTrackId);
+        modalAddToList.hidden = true;
+        showToast('Added to playlist!');
+        if (activeTab === 'lists') renderListsPanel();
+      } else {
+        showToast('Error adding track');
+      }
     });
   });
   modalAddToList.hidden = false;
@@ -673,12 +690,10 @@ Player.onProgress = (ratio, current, total) => {
   if (timeCurrent) timeCurrent.textContent = Player.formatTime(current);
   if (timeTotal) timeTotal.textContent = Player.formatTime(total);
   
-  // Lyrics Mini Player
   if ($('lyrics-progress-fill')) $('lyrics-progress-fill').style.width = pct;
   if ($('lyrics-time-current')) $('lyrics-time-current').textContent = Player.formatTime(current);
   if ($('lyrics-time-total')) $('lyrics-time-total').textContent = Player.formatTime(total);
   
-  // Sincronizar letras del Karaoke
   if (window.Lyrics) Lyrics.sync(current);
 };
 
@@ -699,12 +714,12 @@ Player.onTrackChange = (track) => {
   }
 };
 
-/* ── Init (Fix Sequence order) ───────── */
+/* ── Init ────────────────────────────── */
 (async () => {
   Player.setupMediaSession();
-  await Player.loadLibrary(); // 1. Forzar lectura real de IndexDB primero
-  renderPlaylist();          // 2. Pintar la lista con datos reales
-  await renderAdminList();   // 3. Evaluar el emptyState correctamente con la DB lista
+  await Player.loadLibrary();
+  renderPlaylist();
+  await renderAdminList();
   
   const t = Player.currentTrack();
   if (t) loadLyricsBackground(t);
@@ -852,7 +867,6 @@ function renderLyricsLines() {
   });
 }
 
-// RESTAURACIÓN DE LA CASCADA TÁCTIL (Aquí se procesan las 3 líneas y tamaños grandes)
 Lyrics.onLine = (idx, lines) => {
   const prevEl   = $('inline-prev-line');
   const activeEl = $('inline-active-line');
@@ -866,7 +880,6 @@ Lyrics.onLine = (idx, lines) => {
     if (nextEl) nextEl.textContent = idx < lines.length - 1 ? lines[idx + 1].text : '';
   }
 
-  // Comportamiento dentro de la pantalla completa del Karaoke
   if (lyricsVisible && lyricsLines) {
     lyricsLines.querySelectorAll('.lyric-line').forEach((el, i) => {
       el.classList.toggle('active', i === idx);
