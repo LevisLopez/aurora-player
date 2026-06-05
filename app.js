@@ -67,7 +67,17 @@ btnOpenAdmin.addEventListener('click', () => { renderAdminList(); showScreen('ad
 btnBack.addEventListener('click',      () => showScreen('player'));
 
 /* ── Player callbacks ─────────────────── */
-// onTrackChange, onProgress, onPlayState definidos en sección karaoke abajo
+// onTrackChange defined in lyrics section below
+Player.onPlayState = (playing) => {
+  playIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+};
+Player.onProgress = (ratio, current, total) => {
+  const pct = (ratio * 100).toFixed(2) + '%';
+  progressFill.style.width = pct;
+  progressThumb.style.left = pct;
+  timeCurrent.textContent  = Player.formatTime(current);
+  timeTotal.textContent    = Player.formatTime(total);
+};
 Player.onQueueChange = () => renderPlaylist();
 
 /* ── Transport ────────────────────────── */
@@ -279,8 +289,16 @@ async function renderAdminList() {
     b.addEventListener('click', () => openRenameModal(parseInt(b.dataset.id, 10))));
   adminList.querySelectorAll('.delete-btn').forEach(b =>
     b.addEventListener('click', () => deleteSong(parseInt(b.dataset.id, 10))));
-  adminList.querySelectorAll('.add-list-btn').forEach(b =>
-    b.addEventListener('click', () => openAddToListModal(parseInt(b.dataset.id, 10))));
+ adminList.querySelectorAll('.add-list-btn').forEach(b =>
+    b.addEventListener('click', (e) => {
+      e.stopPropagation(); // Evita que se dispare el click de la fila completa
+      
+      // Intentamos leer 'data-track-id' primero, y si no existe, 'data-id'
+      const trackId = parseInt(b.getAttribute('data-track-id') || b.dataset.id, 10);
+      
+      openAddToListModal(trackId);
+    })
+  );
 }
 
 /* ── File import ──────────────────────── */
@@ -615,29 +633,53 @@ newListSave.addEventListener('click', async () => {
 newListName.addEventListener('keydown', e => { if (e.key === 'Enter') newListSave.click(); });
 
 // Add to playlist modal
+
+
+
+// Add to playlist modal
 let addToListTrackId = null;
 async function openAddToListModal(trackId) {
+  // Doble verificación: si por alguna razón llega vacío desde el administrador, no hacemos nada
+  if (!trackId) {
+    showToast('Error: No track selected');
+    return;
+  }
+  
   addToListTrackId = trackId;
   const lists = await dbGetAllPlaylists();
   if (!lists.length) {
     showToast('No playlists yet — create one in LISTS tab');
     return;
   }
+  
   addToListOpts.innerHTML = lists.map(pl => `
-    <button class="add-to-list-opt" data-id="${pl.id}">
+    <button class="add-to-list-opt" data-playlist-id="${pl.id}">
       <i class="ti ti-playlist"></i>
       <span>${escHtml(pl.name)}</span>
       <span style="font-size:11px;color:var(--text3);margin-left:auto;">${pl.trackIds.length} songs</span>
     </button>`).join('');
+    
   addToListOpts.querySelectorAll('.add-to-list-opt').forEach(btn => {
     btn.addEventListener('click', async () => {
-      await dbAddTrackToPlaylist(parseInt(btn.dataset.id, 10), addToListTrackId);
-      modalAddToList.hidden = true;
-      showToast('Added to playlist!');
+      // Usamos data-playlist-id de forma explícita para que no choque con el id de la canción
+      const plId = parseInt(btn.getAttribute('data-playlist-id'), 10);
+      
+      if (plId && addToListTrackId) {
+        await dbAddTrackToPlaylist(plId, addToListTrackId);
+        modalAddToList.hidden = true;
+        showToast('Added to playlist!');
+        
+        // Si estás parado en la pestaña de listas, refresca la vista automáticamente
+        if (activeTab === 'lists') renderListsPanel();
+      } else {
+        showToast('Error adding track to list');
+      }
     });
   });
   modalAddToList.hidden = false;
 }
+
+
 addToListCancel.addEventListener('click', () => { modalAddToList.hidden = true; });
 modalAddToList.addEventListener('click', e => { if (e.target === modalAddToList) modalAddToList.hidden = true; });
 
@@ -721,7 +763,25 @@ lyricsProgressWrap.addEventListener('click', (e) => {
   Player.seek(Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1));
 });
 
-// Update mini player progress — manejado en sección karaoke
+// Update mini player progress from main player
+Player.onProgress = (ratio, current, total) => {
+  const pct = (ratio * 100).toFixed(2) + '%';
+  progressFill.style.width = pct;
+  progressThumb.style.left = pct;
+  timeCurrent.textContent  = Player.formatTime(current);
+  timeTotal.textContent    = Player.formatTime(total);
+  // Lyrics mini player
+  lyricsPFill.style.width  = pct;
+  lyricsCurrent.textContent = Player.formatTime(current);
+  lyricsTotal.textContent   = Player.formatTime(total);
+  // Sync lyrics
+  Lyrics.sync(current);
+};
+
+Player.onPlayState = (playing) => {
+  playIcon.className      = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+  lyricsPlayIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
+};
 
 // Load lyrics when track changes
 Player.onTrackChange = (track) => {
@@ -729,135 +789,40 @@ Player.onTrackChange = (track) => {
   trackArtist.textContent = track ? (track.artist || 'Unknown') : 'Add songs to get started';
   renderPlaylist();
   Lyrics.clear();
-  resetKaraoke();
+  resetInlineLyrics();
   if (lyricsVisible && track) loadLyricsForTrack(track);
   else if (lyricsVisible) showLyricsState('no-track');
+  // Cargar letras en background para el widget inline aunque la pantalla no esté abierta
   if (track) loadLyricsBackground(track);
 };
 
-/* ══════════════════════════════════════
-   KARAOKE ZONE (60% pantalla principal)
-══════════════════════════════════════ */
-const karaokeScroll  = $('karaoke-scroll');
-const karaokeLines   = $('karaoke-lines');
-const karaokeNoLyrics= $('karaoke-no-lyrics');
-
-function resetKaraoke() {
-  karaokeLines.hidden = true;
-  karaokeLines.innerHTML = '';
-  karaokeNoLyrics.classList.remove('hidden');
-  karaokeLines.style.transform = '';
-  // Fullscreen también
-  const kfl = $('kf-lines-inner');
-  if (kfl) { kfl.innerHTML = ''; kfl.style.transform = ''; }
-  $('kf-no-lyrics').hidden = false;
+function resetInlineLyrics() {
+  $('inline-prev-line').textContent   = '';
+  $('inline-active-line').textContent = '';
+  $('inline-next-line').textContent   = '';
+  $('inline-no-lyrics').classList.remove('hidden');
 }
 
 async function loadLyricsBackground(track) {
   const result = await Lyrics.load(track.id, track.title, track.artist);
+  const noLyrics = $('inline-no-lyrics');
   if (result === 'found' || result === 'cached') {
-    renderKaraokeLines();
-    $('kf-no-lyrics').hidden = true;
+    noLyrics.classList.add('hidden');
   } else {
-    karaokeNoLyrics.classList.remove('hidden');
-    karaokeLines.hidden = true;
-    $('kf-no-lyrics').hidden = false;
+    noLyrics.classList.remove('hidden');
   }
 }
 
-function renderKaraokeLines() {
-  karaokeNoLyrics.classList.add('hidden');
-  karaokeLines.hidden = false;
-  karaokeLines.innerHTML = Lyrics.lines.map((line, i) =>
-    `<div class="karaoke-line" data-idx="${i}">${escHtml(line.text)}</div>`
-  ).join('');
-  karaokeLines.querySelectorAll('.karaoke-line').forEach((el, i) => {
-    el.addEventListener('click', () => {
-      Player.seek(Lyrics.lines[i].time / document.getElementById('audio').duration);
-    });
-  });
-
-  // Fullscreen lines
-  renderKaraokeFullscreenLines();
-}
-
-function renderKaraokeFullscreenLines() {
-  let inner = $('kf-lines-inner');
-  if (!inner) {
-    inner = document.createElement('div');
-    inner.id = 'kf-lines-inner';
-    inner.className = 'kf-lines-inner';
-    $('kf-lines').appendChild(inner);
-  }
-  $('kf-no-lyrics').hidden = true;
-  inner.innerHTML = Lyrics.lines.map((line, i) =>
-    `<div class="kf-line" data-idx="${i}">${escHtml(line.text)}</div>`
-  ).join('');
-  inner.querySelectorAll('.kf-line').forEach((el, i) => {
-    el.addEventListener('click', () => {
-      Player.seek(Lyrics.lines[i].time / document.getElementById('audio').duration);
-    });
-  });
-}
-
-// Scroll karaoke: desplaza el contenedor para centrar la línea activa
-function scrollKaraoke(container, idx) {
-  if (idx < 0 || !container) return;
-  const lines = container.querySelectorAll('[data-idx]');
-  if (!lines[idx]) return;
-  const containerH = container.parentElement.clientHeight;
-  const lineTop    = lines[idx].offsetTop;
-  const lineH      = lines[idx].offsetHeight;
-  const offset     = lineTop - (containerH / 2) + (lineH / 2);
-  container.style.transform = `translateY(${-offset}px)`;
-}
-
-// Cuando cambia la línea activa
-Lyrics.onLine = (idx, lines) => {
-  // ── Karaoke zone (60%) ──
-  const kEls = karaokeLines.querySelectorAll('.karaoke-line');
-  kEls.forEach((el, i) => {
-    el.classList.toggle('active', i === idx);
-    el.classList.toggle('past',   i < idx);
-  });
-  if (idx >= 0) scrollKaraoke(karaokeLines, idx);
-
-  // ── Fullscreen karaoke ──
-  const kfInner = $('kf-lines-inner');
-  if (kfInner) {
-    const kfEls = kfInner.querySelectorAll('.kf-line');
-    kfEls.forEach((el, i) => {
-      el.classList.toggle('active', i === idx);
-      el.classList.toggle('past',   i < idx);
-    });
-    if (idx >= 0) scrollKaraoke(kfInner, idx);
-  }
-
-  // ── Pantalla lyrics completa ──
-  if (!lyricsVisible) return;
-  const els = lyricsLines.querySelectorAll('.lyric-line');
-  els.forEach((el, i) => {
-    el.classList.toggle('active', i === idx);
-    el.classList.toggle('past',   i < idx);
-  });
-  if (idx >= 0 && els[idx]) {
-    els[idx].scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }
-};
-
-/* ══════════════════════════════════════
-   PANTALLA LYRICS COMPLETA (screen-lyrics)
-══════════════════════════════════════ */
 async function loadLyricsForTrack(track) {
   lyricsTrackTitle.textContent  = track.title  || 'Unknown';
   lyricsTrackArtist.textContent = track.artist || 'Unknown';
   showLyricsState('loading');
+
   const result = await Lyrics.load(track.id, track.title, track.artist);
+
   if (result === 'found' || result === 'cached') {
     renderLyricsLines();
     lyricsDeleteBtn.style.display = '';
-    // También renderizar karaoke zone si aún no está
-    if (karaokeLines.children.length === 0) renderKaraokeLines();
   } else {
     showLyricsState('not-found');
     lyricsDeleteBtn.style.display = 'none';
@@ -876,6 +841,8 @@ function renderLyricsLines() {
   lyricsLines.innerHTML = Lyrics.lines.map((line, i) =>
     `<div class="lyric-line" data-idx="${i}">${escHtml(line.text)}</div>`
   ).join('');
+
+  // Tap a line → seek to that time
   lyricsLines.querySelectorAll('.lyric-line').forEach((el, i) => {
     el.addEventListener('click', () => {
       Player.seek(Lyrics.lines[i].time / document.getElementById('audio').duration);
@@ -883,88 +850,38 @@ function renderLyricsLines() {
   });
 }
 
-/* ══════════════════════════════════════
-   FULLSCREEN KARAOKE
-══════════════════════════════════════ */
-const kfOverlay   = $('karaoke-fullscreen');
-const kfControls  = $('kf-controls');
-const btnExpand   = $('btn-expand');
-const btnCollapse = $('btn-collapse');
-let kfControlsTimer = null;
-let kfOpen = false;
+// When active line changes — highlight + scroll (pantalla lyrics)
+// Y también actualizar el widget inline en el player principal
+Lyrics.onLine = (idx, lines) => {
+  // ── Inline lyrics widget ──────────────
+  const prevEl   = $('inline-prev-line');
+  const activeEl = $('inline-active-line');
+  const nextEl   = $('inline-next-line');
+  const noLyrics = $('inline-no-lyrics');
 
-function openFullscreen() {
-  kfOpen = true;
-  kfOverlay.hidden = false;
-  kfControls.hidden = true;
-  // Sincronizar info del track
-  const t = Player.currentTrack();
-  $('kf-title').textContent  = t?.title  || '—';
-  $('kf-artist').textContent = t?.artist || '—';
-  $('kf-play-icon').className = Player.isPlaying ? 'ti ti-player-pause' : 'ti ti-player-play';
-  // Si no hay líneas renderizadas aún, renderizar
-  if (!$('kf-lines-inner') && Lyrics.enabled) renderKaraokeFullscreenLines();
-  // Volver a centrar en línea actual
-  if (Lyrics.activeIdx >= 0) scrollKaraoke($('kf-lines-inner'), Lyrics.activeIdx);
-}
-
-function closeFullscreen() {
-  kfOpen = false;
-  kfOverlay.hidden = true;
-  clearTimeout(kfControlsTimer);
-}
-
-function showKfControls() {
-  kfControls.hidden = false;
-  clearTimeout(kfControlsTimer);
-  kfControlsTimer = setTimeout(() => { kfControls.hidden = true; }, 3000);
-}
-
-btnExpand.addEventListener('click',   openFullscreen);
-btnCollapse.addEventListener('click', closeFullscreen);
-
-// Tocar la pantalla → mostrar controles temporalmente
-kfOverlay.addEventListener('click', (e) => {
-  if (e.target.closest('#kf-controls')) return; // clic dentro de controles → no ocultar
-  if (kfControls.hidden) showKfControls();
-  else { clearTimeout(kfControlsTimer); kfControls.hidden = true; }
-});
-
-// Botones del fullscreen
-$('kf-prev').addEventListener('click', () => Player.prev());
-$('kf-next').addEventListener('click', () => Player.next(true));
-$('kf-play').addEventListener('click', () => Player.togglePlay());
-$('kf-progress-wrap').addEventListener('click', (e) => {
-  const rect = $('kf-progress-wrap').getBoundingClientRect();
-  Player.seek(Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1));
-});
-
-// Sync progress en fullscreen
-Player.onProgress = (ratio, current, total) => {
-  const pct = (ratio * 100).toFixed(2) + '%';
-  progressFill.style.width = pct;
-  progressThumb.style.left = pct;
-  timeCurrent.textContent  = Player.formatTime(current);
-  timeTotal.textContent    = Player.formatTime(total);
-  // Lyrics mini player
-  lyricsPFill.style.width   = pct;
-  lyricsCurrent.textContent = Player.formatTime(current);
-  lyricsTotal.textContent   = Player.formatTime(total);
-  // Fullscreen
-  if (kfOpen) {
-    $('kf-progress-fill').style.width  = pct;
-    $('kf-time-current').textContent   = Player.formatTime(current);
-    $('kf-time-total').textContent     = Player.formatTime(total);
+  if (idx >= 0 && lines.length) {
+    noLyrics.classList.add('hidden');
+    prevEl.textContent   = idx > 0              ? lines[idx - 1].text : '';
+    activeEl.textContent = lines[idx].text;
+    nextEl.textContent   = idx < lines.length-1 ? lines[idx + 1].text : '';
   }
-  // Sync lyrics
-  Lyrics.sync(current);
+
+  // ── Pantalla lyrics completa ──────────
+  if (!lyricsVisible) return;
+  const els = lyricsLines.querySelectorAll('.lyric-line');
+  els.forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+    el.classList.toggle('past',   i < idx);
+  });
+  if (idx >= 0 && els[idx]) {
+    els[idx].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
 };
 
-Player.onPlayState = (playing) => {
-  playIcon.className       = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
-  lyricsPlayIcon.className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
-  $('kf-play-icon').className = playing ? 'ti ti-player-pause' : 'ti ti-player-play';
-};
+// Tocar el widget inline abre la pantalla de letras
+document.getElementById('inline-lyrics').addEventListener('click', () => {
+  if (Player.currentTrack()) showLyricsScreen();
+});
 
 /* ── Upload .lrc file ── */
 function handleLrcUpload() { lrcFileInput.click(); }
