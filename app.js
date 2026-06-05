@@ -250,6 +250,13 @@ function renderPlaylist() {
     });
   });
 
+  playlistEl.querySelectorAll('.add-pl-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      openAddToListModal(parseInt(btn.dataset.id, 10));
+    });
+  });
+
   const activeEl = playlistEl.querySelector('.playlist-item.active');
   if (activeEl) activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
@@ -289,16 +296,8 @@ async function renderAdminList() {
     b.addEventListener('click', () => openRenameModal(parseInt(b.dataset.id, 10))));
   adminList.querySelectorAll('.delete-btn').forEach(b =>
     b.addEventListener('click', () => deleteSong(parseInt(b.dataset.id, 10))));
- adminList.querySelectorAll('.add-list-btn').forEach(b =>
-    b.addEventListener('click', (e) => {
-      e.stopPropagation(); // Evita que se dispare el click de la fila completa
-      
-      // Intentamos leer 'data-track-id' primero, y si no existe, 'data-id'
-      const trackId = parseInt(b.getAttribute('data-track-id') || b.dataset.id, 10);
-      
-      openAddToListModal(trackId);
-    })
-  );
+  adminList.querySelectorAll('.add-list-btn').forEach(b =>
+    b.addEventListener('click', () => openAddToListModal(parseInt(b.dataset.id, 10))));
 }
 
 /* ── File import ──────────────────────── */
@@ -410,7 +409,7 @@ const btnSelect      = $('btn-select');
 const selectBar      = $('select-bar');
 const selectCount    = $('select-count');
 const selectAllBtn   = $('select-all-btn');
-const selectDeleteBtn= $('select-delete-btn');
+const selectDeleteBtn= null;
 const selectCancelBtn= $('select-cancel-btn');
 
 btnSelect.addEventListener('click', () => {
@@ -633,53 +632,29 @@ newListSave.addEventListener('click', async () => {
 newListName.addEventListener('keydown', e => { if (e.key === 'Enter') newListSave.click(); });
 
 // Add to playlist modal
-
-
-
-// Add to playlist modal
 let addToListTrackId = null;
 async function openAddToListModal(trackId) {
-  // Doble verificación: si por alguna razón llega vacío desde el administrador, no hacemos nada
-  if (!trackId) {
-    showToast('Error: No track selected');
-    return;
-  }
-  
   addToListTrackId = trackId;
   const lists = await dbGetAllPlaylists();
   if (!lists.length) {
     showToast('No playlists yet — create one in LISTS tab');
     return;
   }
-  
   addToListOpts.innerHTML = lists.map(pl => `
-    <button class="add-to-list-opt" data-playlist-id="${pl.id}">
+    <button class="add-to-list-opt" data-id="${pl.id}">
       <i class="ti ti-playlist"></i>
       <span>${escHtml(pl.name)}</span>
       <span style="font-size:11px;color:var(--text3);margin-left:auto;">${pl.trackIds.length} songs</span>
     </button>`).join('');
-    
   addToListOpts.querySelectorAll('.add-to-list-opt').forEach(btn => {
     btn.addEventListener('click', async () => {
-      // Usamos data-playlist-id de forma explícita para que no choque con el id de la canción
-      const plId = parseInt(btn.getAttribute('data-playlist-id'), 10);
-      
-      if (plId && addToListTrackId) {
-        await dbAddTrackToPlaylist(plId, addToListTrackId);
-        modalAddToList.hidden = true;
-        showToast('Added to playlist!');
-        
-        // Si estás parado en la pestaña de listas, refresca la vista automáticamente
-        if (activeTab === 'lists') renderListsPanel();
-      } else {
-        showToast('Error adding track to list');
-      }
+      await dbAddTrackToPlaylist(parseInt(btn.dataset.id, 10), addToListTrackId);
+      modalAddToList.hidden = true;
+      showToast('Added to playlist!');
     });
   });
   modalAddToList.hidden = false;
 }
-
-
 addToListCancel.addEventListener('click', () => { modalAddToList.hidden = true; });
 modalAddToList.addEventListener('click', e => { if (e.target === modalAddToList) modalAddToList.hidden = true; });
 
@@ -796,20 +771,78 @@ Player.onTrackChange = (track) => {
   if (track) loadLyricsBackground(track);
 };
 
+/* ── Inline lyrics 60% area ── */
 function resetInlineLyrics() {
-  $('inline-prev-line').textContent   = '';
-  $('inline-active-line').textContent = '';
-  $('inline-next-line').textContent   = '';
-  $('inline-no-lyrics').classList.remove('hidden');
+  const scroll = $('lyrics-scroll');
+  const notplaying = $('lyrics-notplaying');
+  if (scroll) scroll.innerHTML = '';
+  if (notplaying) notplaying.hidden = false;
+  if ($('lyrics-searching')) $('lyrics-searching').hidden = true;
+  if ($('lyrics-nofound')) $('lyrics-nofound').hidden = true;
 }
 
 async function loadLyricsBackground(track) {
+  if (!track) return;
+  const notplaying = $('lyrics-notplaying');
+  const searching  = $('lyrics-searching');
+  const nofound    = $('lyrics-nofound');
+  const scroll     = $('lyrics-scroll');
+  if (notplaying) notplaying.hidden = true;
+  if (searching)  searching.hidden  = false;
+  if (nofound)    nofound.hidden    = true;
+  if (scroll)     scroll.innerHTML  = '';
+
   const result = await Lyrics.load(track.id, track.title, track.artist);
-  const noLyrics = $('inline-no-lyrics');
+  if (searching) searching.hidden = true;
+
   if (result === 'found' || result === 'cached') {
-    noLyrics.classList.add('hidden');
+    renderInlineScroll();
   } else {
-    noLyrics.classList.remove('hidden');
+    if (nofound) nofound.hidden = false;
+  }
+}
+
+function renderInlineScroll() {
+  const scroll = $('lyrics-scroll');
+  if (!scroll || !Lyrics.lines.length) return;
+  scroll.innerHTML = Lyrics.lines.map((l, i) =>
+    `<div class="lrc-line" data-i="${i}">${escHtml(l.text)}</div>`
+  ).join('');
+  // tap a line → seek
+  scroll.querySelectorAll('.lrc-line').forEach((el, i) => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const audio = document.getElementById('audio');
+      if (audio.duration) audio.currentTime = Lyrics.lines[i].time;
+      if (audio.paused) audio.play().catch(()=>{});
+    });
+  });
+  updateInlineHighlight();
+}
+
+function updateInlineHighlight() {
+  const idx = Lyrics.activeIdx;
+  const els = document.querySelectorAll('.lrc-line');
+  if (!els.length) return;
+  els.forEach((el, i) => {
+    el.classList.remove('active','past','near-next');
+    if (i === idx)     el.classList.add('active');
+    else if (i < idx)  el.classList.add('past');
+    else if (i === idx+1) el.classList.add('near-next');
+  });
+  // scroll active into center of lyrics-main
+  const activeEl = document.querySelector('.lrc-line.active');
+  const container = $('lyrics-main');
+  if (activeEl && container) {
+    const containerTop = container.getBoundingClientRect().top;
+    const containerH   = container.getBoundingClientRect().height;
+    const elTop        = activeEl.getBoundingClientRect().top;
+    const elH          = activeEl.getBoundingClientRect().height;
+    const scroll       = $('lyrics-scroll');
+    if (scroll) {
+      const offset = (elTop - containerTop) - (containerH / 2) + (elH / 2);
+      scroll.style.transform = `translateY(${-offset}px)`;
+    }
   }
 }
 
@@ -850,23 +883,11 @@ function renderLyricsLines() {
   });
 }
 
-// When active line changes — highlight + scroll (pantalla lyrics)
-// Y también actualizar el widget inline en el player principal
 Lyrics.onLine = (idx, lines) => {
-  // ── Inline lyrics widget ──────────────
-  const prevEl   = $('inline-prev-line');
-  const activeEl = $('inline-active-line');
-  const nextEl   = $('inline-next-line');
-  const noLyrics = $('inline-no-lyrics');
+  // Update inline 60% area
+  updateInlineHighlight();
 
-  if (idx >= 0 && lines.length) {
-    noLyrics.classList.add('hidden');
-    prevEl.textContent   = idx > 0              ? lines[idx - 1].text : '';
-    activeEl.textContent = lines[idx].text;
-    nextEl.textContent   = idx < lines.length-1 ? lines[idx + 1].text : '';
-  }
-
-  // ── Pantalla lyrics completa ──────────
+  // Update fullscreen lyrics if open
   if (!lyricsVisible) return;
   const els = lyricsLines.querySelectorAll('.lyric-line');
   els.forEach((el, i) => {
@@ -878,10 +899,21 @@ Lyrics.onLine = (idx, lines) => {
   }
 };
 
-// Tocar el widget inline abre la pantalla de letras
-document.getElementById('inline-lyrics').addEventListener('click', () => {
-  if (Player.currentTrack()) showLyricsScreen();
-});
+/* ── Double-tap on lyrics-main → fullscreen ── */
+let lastTap = 0;
+const lyricsMainEl = $('lyrics-main');
+if (lyricsMainEl) {
+  lyricsMainEl.addEventListener('click', (e) => {
+    if (e.target.closest('.lrc-line')) return; // let line click handle
+    if (e.target.closest('.inline-upload-btn')) return;
+    const now = Date.now();
+    if (now - lastTap < 350) {
+      // double tap → open fullscreen
+      if (Player.currentTrack() && Lyrics.enabled) showLyricsScreen();
+    }
+    lastTap = now;
+  });
+}
 
 /* ── Upload .lrc file ── */
 function handleLrcUpload() { lrcFileInput.click(); }
