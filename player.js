@@ -1,8 +1,5 @@
 /* ═══════════════════════════════════════
-   player.js — Audio engine v6
-   - Fixes persistent session crash (Lazy Loading Blobs)
-   - Handles background tab memory limits
-   - Seamless sync with lyrics.js
+   player.js — Audio engine v5
 ═══════════════════════════════════════ */
 const Player = (() => {
 
@@ -11,15 +8,14 @@ const Player = (() => {
   let queuePos      = 0;
   let isPlaying     = false;
   let shuffleOn     = false;
-  let repeatMode    = 'none'; // 'none', 'all', 'one'
+  let repeatMode    = 'none';
   let favoritesOnly = false;
   let currentObjectURL = null;
-  let isHydratedSession = false; // Bandera para saber si el tema actual es heredado de una sesión vieja
 
   const audio = document.getElementById('audio');
   let onTrackChange = null, onPlayState = null, onProgress = null, onQueueChange = null;
 
-  // ── Save last track session ──────────────
+  // ── Save/restore last track ──────────────
   function saveSession() {
     const t = currentTrack();
     if (t) {
@@ -28,7 +24,7 @@ const Player = (() => {
     }
   }
 
-  // ── Queue Builder ────────────────────────
+  // ── Queue ────────────────────────────────
   function buildQueue() {
     const source = favoritesOnly
       ? tracks.map((_, i) => i).filter(i => tracks[i].favorite === true)
@@ -63,86 +59,22 @@ const Player = (() => {
     if (pos !== -1) queuePos = pos;
     const track = tracks[trackIndex];
     if (!track) return;
-
-    // Limpieza estricta de la memoria RAM del objeto binario anterior
-    if (currentObjectURL) {
-      URL.revokeObjectURL(currentObjectURL);
-      currentObjectURL = null;
-    }
-
-    isHydratedSession = !autoPlay && seekTo > 0;
-
-    // ESTRATEGIA LAZY LOADING: Si restauramos sesión sin autoplay, NO leemos el Blob todavía.
-    // Evitamos saturar o romper punteros de memoria RAM en frío.
-    if (isHydratedSession) {
-      audio.src = ''; // Vacío limpio temporal
-      if (onTrackChange) onTrackChange(track);
-      updateMediaSession(track);
-      
-      // Forzamos a la UI a pintar el tiempo guardado en el localStorage
-      if (onProgress) onProgress(0, seekTo, track.duration || 0);
-      return;
-    }
-
-    // Carga normal activa (Cuando se le da Play o pasa de canción automáticamente)
+    if (currentObjectURL) URL.revokeObjectURL(currentObjectURL);
     const full = await dbGetTrack(track.id);
-    if (!full || !full.blob) {
-      console.error("No se pudo recuperar el archivo de audio de IndexedDB.");
-      return;
-    }
-
+    if (!full || !full.blob) return;
     currentObjectURL = URL.createObjectURL(full.blob);
     audio.src = currentObjectURL;
     audio.load();
-
-    if (seekTo > 0) {
-      audio.currentTime = seekTo;
-    }
-
+    if (seekTo > 0) audio.currentTime = seekTo;
     if (onTrackChange) onTrackChange(track);
     updateMediaSession(track);
-
-    if (autoPlay) {
-      const p = audio.play();
-      if (p) p.catch(() => {});
-    }
+    if (autoPlay) { const p = audio.play(); if (p) p.catch(() => {}); }
   }
 
-  // ── Transport (Repotenciado para Lazy Loading) ──
-  async function play() {
-    if (!tracks.length) return;
-
-    // Si el track actual proviene de una sesión vieja restaurada y el Blob no está cargado en RAM
-    if (isHydratedSession) {
-      isHydratedSession = false;
-      const track = currentTrack();
-      const lastTime = parseFloat(localStorage.getItem('aurora_last_time') || '0');
-      
-      if (track) {
-        const full = await dbGetTrack(track.id);
-        if (full && full.blob) {
-          currentObjectURL = URL.createObjectURL(full.blob);
-          audio.src = currentObjectURL;
-          audio.load();
-          audio.currentTime = lastTime;
-        }
-      }
-    }
-
-    const p = audio.play();
-    if (p) p.catch(() => {});
-  }
-
-  function pause() { 
-    audio.pause(); 
-    saveSession();
-  }
-  
-  function togglePlay() { 
-    if (audio.paused && !isHydratedSession) play(); 
-    else if (isHydratedSession) play();
-    else pause(); 
-  }
+  // ── Transport ────────────────────────────
+  function play()       { if (!tracks.length) return; const p = audio.play(); if (p) p.catch(() => {}); }
+  function pause()      { audio.pause(); }
+  function togglePlay() { if (audio.paused) play(); else pause(); }
 
   function next(autoPlay = true) {
     if (!tracks.length || !queue.length) return;
@@ -160,10 +92,7 @@ const Player = (() => {
     if (onQueueChange) onQueueChange();
   }
 
-  function seek(ratio) { 
-    if (isHydratedSession) return; // Evita saltos accidentales en canciones no cargadas
-    if (audio.duration) audio.currentTime = ratio * audio.duration; 
-  }
+  function seek(ratio) { if (audio.duration) audio.currentTime = ratio * audio.duration; }
 
   function toggleShuffle() {
     shuffleOn = !shuffleOn;
@@ -182,17 +111,14 @@ const Player = (() => {
     return repeatMode;
   }
 
-  // ── Load library (Arreglado de raíz) ───────
+  // ── Load library ─────────────────────────
   async function loadLibrary() {
     tracks = await dbGetAllTracks();
     buildQueue();
 
-    if (!tracks.length) { 
-      if (onQueueChange) onQueueChange(); 
-      return; 
-    }
+    if (!tracks.length) { if (onQueueChange) onQueueChange(); return; }
 
-    // Recuperar datos de la última sesión desde el almacenamiento local
+    // Restore last session
     const lastId   = parseInt(localStorage.getItem('aurora_last_id')  || '0', 10);
     const lastTime = parseFloat(localStorage.getItem('aurora_last_time') || '0');
     const lastIdx  = tracks.findIndex(t => t.id === lastId);
@@ -200,7 +126,6 @@ const Player = (() => {
     if (lastIdx !== -1) {
       const posInQueue = queue.indexOf(lastIdx);
       if (posInQueue !== -1) queuePos = posInQueue;
-      // Pasamos autoPlay = false para activar la protección de Lazy Loading
       await loadTrack(queue[queuePos], false, lastTime);
     } else {
       queuePos = 0;
@@ -266,7 +191,7 @@ const Player = (() => {
   async function requestWakeLock() {
     if (!('wakeLock' in navigator)) return;
     try {
-      if (wakeLock) return;
+      if (wakeLock) return; // already active
       wakeLock = await navigator.wakeLock.request('screen');
       wakeLock.addEventListener('release', () => { wakeLock = null; });
     } catch (_) {}
@@ -278,6 +203,7 @@ const Player = (() => {
     wakeLock = null;
   }
 
+  // Re-acquire wake lock when page becomes visible again
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState === 'visible' && isPlaying) {
       await requestWakeLock();
@@ -328,7 +254,6 @@ const Player = (() => {
     else { if (queuePos < queue.length - 1) next(true); else { isPlaying = false; if (onPlayState) onPlayState(false); } }
   });
   audio.addEventListener('timeupdate', () => {
-    if (isHydratedSession) return; // No emitir eventos de progreso si el audio físico no está acoplado
     if (!audio.duration) return;
     const ratio = audio.currentTime / audio.duration;
     if (onProgress) onProgress(ratio, audio.currentTime, audio.duration);
@@ -337,11 +262,12 @@ const Player = (() => {
     }
   });
 
+  // Save on page hide (tab switch, app close)
   document.addEventListener('visibilitychange', () => { if (document.hidden) saveSession(); });
   window.addEventListener('pagehide', saveSession);
 
   return {
-    loadLibrary, refreshLibrary, playById, togglePlay, next, prev, seek, play, pause,
+    loadLibrary, refreshLibrary, playById, togglePlay, next, prev, seek,
     toggleShuffle, cycleRepeat, setupMediaSession, setFavoritesOnly, currentTrack, formatTime,
     get tracks()        { return tracks; },
     get queue()         { return queue; },
@@ -356,6 +282,3 @@ const Player = (() => {
     set onQueueChange(fn) { onQueueChange = fn; },
   };
 })();
-
-// Expone globalmente para que interactúe de forma nativa con lyrics.js
-window.AudioEngine = document.getElementById('audio');
