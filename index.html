@@ -37,21 +37,13 @@
     <div id="track-artist" class="track-artist">Add songs to get started</div>
   </div>
 
-  <!-- MAIN VISUAL: 60% lyrics area -->
-  <div id="lyrics-main" class="lyrics-main" id="lyrics-main">
-    <div id="lyrics-scroll" class="lyrics-scroll"></div>
-    <div id="lyrics-searching" class="lyrics-searching" hidden>
-      <span>Searching lyrics...</span>
-    </div>
-    <div id="lyrics-nofound" class="lyrics-nofound-inline" hidden>
-      <i class="ti ti-microphone-off"></i>
-      <p>No lyrics found</p>
-      <button id="inline-upload-btn" class="inline-upload-btn">
-        <i class="ti ti-upload"></i> Upload .lrc
-      </button>
-    </div>
-    <div id="lyrics-notplaying" class="lyrics-notplaying">
-      <i class="ti ti-music"></i>
+  <!-- INLINE LYRICS (reemplaza las barras EQ) -->
+  <div id="inline-lyrics" class="inline-lyrics" aria-live="polite">
+    <div id="inline-prev-line"    class="inline-line prev"></div>
+    <div id="inline-active-line"  class="inline-line active"></div>
+    <div id="inline-next-line"    class="inline-line next"></div>
+    <div id="inline-no-lyrics"    class="inline-no-lyrics">
+      <i class="ti ti-microphone-2"></i>
     </div>
   </div>
 
@@ -197,6 +189,7 @@
     <span id="select-count" class="select-count">0 selected</span>
     <div style="display:flex;gap:8px;">
       <button id="select-all-btn"    class="modal-btn secondary" style="padding:8px 14px;font-size:13px;">All</button>
+      <button id="select-delete-btn" class="modal-btn primary"   style="padding:8px 14px;font-size:13px;background:#ef4444;"><i class="ti ti-trash"></i> Delete</button>
       <button id="select-cancel-btn" class="modal-btn secondary" style="padding:8px 14px;font-size:13px;">Cancel</button>
     </div>
   </div>
