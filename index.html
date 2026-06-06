@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, interactive-widget=resizes-visual" />
+  <meta name="theme-color" content="#020817" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Aurora English</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<main class="app-shell" aria-label="Aurora English karaoke app">
+  <section id="screen-player" class="screen screen-player active" aria-label="Main karaoke screen">
+    <header class="top-bar clean-top">
+      <div class="brand-copy">
+        <span class="eyebrow">Aurora English</span>
+        <strong>Karaoke Learning</strong>
+      </div>
+      <button id="btn-settings" class="gear-btn" aria-label="Open settings" title="Settings">
+        <i class="ti ti-settings"></i>
+      </button>
+    </header>
+
+    <div id="sleep-badge" class="sleep-badge" hidden>
+      <span id="sleep-countdown">--:--</span>
+      <button id="sleep-cancel" class="sleep-cancel-btn" aria-label="Cancel sleep timer">×</button>
+    </div>
+
+    <section id="karaoke-main" class="karaoke-main" aria-label="Karaoke lyrics" tabindex="0">
+      <div class="karaoke-glow" aria-hidden="true"></div>
+      <div id="inline-lyrics" class="lyrics-stage" aria-live="polite">
+        <div id="inline-lines" class="inline-lines"></div>
+        <div id="inline-no-lyrics" class="inline-no-lyrics">
+          <strong>Lyrics will appear here</strong>
+          <span>Play a song or add synced .LRC lyrics from Settings.</span>
+          <small>Double tap this area for a completely clean fullscreen mode.</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="bottom-player" aria-label="Playback controls">
+      <div class="track-strip">
+        <div class="track-info">
+          <div id="track-title" class="track-title">No track loaded</div>
+          <div id="track-artist" class="track-artist">Add songs to get started</div>
+        </div>
+        <button id="btn-play" class="play-btn" aria-label="Play or pause" title="Play / Pause">
+          <i class="ti ti-player-play" id="play-icon"></i>
+        </button>
+      </div>
+
+      <div class="progress-section">
+        <div class="progress-bar-wrap" id="progress-wrap" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="progress-track">
+            <div id="progress-fill" class="progress-fill"></div>
+            <div id="progress-thumb" class="progress-thumb"></div>
+          </div>
+        </div>
+        <div class="progress-times">
+          <span id="time-current">0:00</span>
+          <span id="time-total">0:00</span>
+        </div>
+      </div>
+
+      <div class="controls-row compact-controls">
+        <button id="btn-shuffle" class="ctrl-btn" aria-label="Shuffle" title="Shuffle"><i class="ti ti-arrows-shuffle"></i></button>
+        <button id="btn-prev" class="ctrl-btn" aria-label="Previous" title="Previous"><i class="ti ti-player-skip-back"></i></button>
+        <button id="btn-next" class="ctrl-btn" aria-label="Next" title="Next"><i class="ti ti-player-skip-forward"></i></button>
+        <button id="btn-repeat" class="ctrl-btn" aria-label="Repeat" title="Repeat"><i class="ti ti-repeat"></i></button>
+      </div>
+
+      <div class="main-actions" aria-label="Add music options">
+        <button id="btn-add-song-main" class="text-action">Add songs</button>
+        <button id="btn-online-search" class="text-action">Online search</button>
+      </div>
+    </section>
+
+    <section class="library-panel" aria-label="Song list">
+      <div class="library-header">
+        <div>
+          <div id="library-title" class="library-title">Songs</div>
+          <span id="playlist-count" class="playlist-count">0 songs</span>
+        </div>
+        <div class="library-tools">
+          <select id="sort-select" class="sort-select" aria-label="Sort songs">
+            <option value="recent">Recently added</option>
+            <option value="az">A–Z</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="playlist" class="playlist"></div>
+
+      <div id="empty-favorites" class="empty-state-soft" hidden>
+        <p>No favorites yet</p>
+        <span>Open the three-dot menu on a song and add it to Favorites.</span>
+      </div>
+      <div id="empty-top" class="empty-state-soft" hidden>
+        <p>No listening history yet</p>
+        <span>Play songs and Aurora will build your Top 10.</span>
+      </div>
+
+      <div id="lists-panel" class="lists-panel" hidden>
+        <div id="lists-grid" class="lists-grid"></div>
+        <button id="btn-new-list" class="btn-new-list">New playlist</button>
+      </div>
+
+      <div id="list-detail" class="list-detail" hidden>
+        <div class="list-detail-header">
+          <button id="list-back" class="back-text-btn" aria-label="Back to playlists">Back</button>
+          <div class="list-heading">
+            <span id="list-detail-name" class="list-detail-name">Playlist</span>
+            <span id="list-detail-count" class="list-detail-count">0 songs</span>
+          </div>
+          <button id="list-delete" class="danger-text-btn" aria-label="Delete playlist">Delete</button>
+        </div>
+        <div id="list-detail-tracks" class="playlist"></div>
+        <div id="list-empty" class="empty-state-soft" hidden>
+          <p>No songs in this playlist yet</p>
+          <span>Add songs from the three-dot menu.</span>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <section id="screen-admin" class="screen screen-admin" aria-label="Library management">
+    <header class="top-bar admin-top">
+      <button id="btn-back" class="back-text-btn" aria-label="Back">Back</button>
+      <div class="admin-title-block">
+        <span class="eyebrow">Manage</span>
+        <strong>Library</strong>
+      </div>
+      <button id="btn-add-song" class="text-action small">Add</button>
+    </header>
+
+    <input type="file" id="import-file-input" accept=".json,application/json" hidden />
+    <input type="file" id="file-input" accept="audio/*,.mp3,.mp4,.m4a,.ogg,.oga,.opus,.wav,.flac,.aac,.weba,.webm" multiple hidden />
+    <input type="file" id="lrc-file-input" accept=".lrc,.txt" hidden />
+
+    <div class="admin-toolbar">
+      <button id="btn-import" class="mini-btn">Import backup</button>
+      <button id="btn-export" class="mini-btn">Export backup</button>
+      <button id="btn-select" class="mini-btn">Select</button>
+    </div>
+
+    <div id="select-bar" class="select-bar" hidden>
+      <span id="select-count" class="select-count">0 selected</span>
+      <div class="select-actions">
+        <button id="select-all-btn" class="mini-btn">All</button>
+        <button id="select-delete-btn" class="mini-btn danger">Delete</button>
+        <button id="select-cancel-btn" class="mini-btn">Cancel</button>
+      </div>
+    </div>
+
+    <div class="admin-info">
+      <span id="admin-count">0 songs</span>
+      <span id="admin-size">0 MB used</span>
+    </div>
+    <div id="admin-list" class="admin-list"></div>
+    <div id="empty-state" class="empty-state">
+      <p>No songs yet</p>
+      <span>Add songs from this screen or from the main screen.</span>
+    </div>
+  </section>
+</main>
+
+<!-- FULLSCREEN KARAOKE -->
+<section id="fullscreen-karaoke" class="fullscreen-karaoke" hidden aria-label="Fullscreen karaoke">
+  <div id="fullscreen-lines" class="fullscreen-lines"></div>
+  <div id="fullscreen-empty" class="fullscreen-empty">
+    <strong>Lyrics will appear here</strong>
+    <span>Tap once to show controls. Double tap the main lyrics area to enter this mode.</span>
+  </div>
+  <div id="fullscreen-controls" class="fullscreen-controls" aria-label="Fullscreen playback controls">
+    <div class="fullscreen-top-controls">
+      <button id="fullscreen-back" class="back-text-btn">Back</button>
+      <div class="fullscreen-title-block">
+        <span id="fullscreen-title">No track loaded</span>
+        <small id="fullscreen-artist">—</small>
+      </div>
+    </div>
+    <div class="fullscreen-progress-wrap" id="fullscreen-progress-wrap" role="slider" aria-label="Seek fullscreen audio">
+      <div class="fullscreen-progress-track">
+        <div id="fullscreen-progress-fill" class="fullscreen-progress-fill"></div>
+      </div>
+    </div>
+    <div class="fullscreen-time-row">
+      <span id="fullscreen-time-current">0:00</span>
+      <span id="fullscreen-time-total">0:00</span>
+    </div>
+    <div class="fullscreen-control-row">
+      <button id="fullscreen-prev" class="ctrl-btn" aria-label="Previous"><i class="ti ti-player-skip-back"></i></button>
+      <button id="fullscreen-play" class="play-btn" aria-label="Play or pause"><i class="ti ti-player-play" id="fullscreen-play-icon"></i></button>
+      <button id="fullscreen-next" class="ctrl-btn" aria-label="Next"><i class="ti ti-player-skip-forward"></i></button>
+    </div>
+  </div>
+</section>
+
+<!-- SETTINGS SHEET -->
+<section id="settings-panel" class="settings-panel" hidden aria-label="Settings">
+  <div id="settings-backdrop" class="panel-backdrop"></div>
+  <aside class="settings-sheet" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="sheet-header">
+      <div>
+        <span class="eyebrow">Menu</span>
+        <strong id="settings-title">Settings</strong>
+      </div>
+      <button id="settings-close" class="close-text-btn" aria-label="Close settings">Close</button>
+    </div>
+
+    <div class="settings-group">
+      <button id="settings-theme" class="settings-item">Color themes</button>
+      <button id="settings-night" class="settings-item">Night mode: Off</button>
+      <button id="btn-sleep" class="settings-item">Sleep timer</button>
+    </div>
+
+    <div class="settings-group">
+      <button id="settings-all" class="settings-item">All songs</button>
+      <button id="settings-favorites" class="settings-item">Favorites</button>
+      <button id="settings-playlists" class="settings-item">Playlists</button>
+      <button id="settings-top" class="settings-item">Top 10 most listened</button>
+      <button id="settings-search-library" class="settings-item">Search library</button>
+    </div>
+
+    <div class="settings-group">
+      <button id="settings-upload-lyrics" class="settings-item">Upload .LRC lyrics for current song</button>
+      <button id="settings-delete-lyrics" class="settings-item danger">Delete lyrics for current song</button>
+    </div>
+
+    <div class="settings-group">
+      <button id="settings-manage" class="settings-item">Manage library</button>
+      <button id="settings-import" class="settings-item">Import backup</button>
+      <button id="settings-export" class="settings-item">Export backup</button>
+    </div>
+  </aside>
+</section>
+
+<!-- SEARCH OVERLAY -->
+<section id="search-overlay" class="search-overlay" hidden aria-label="Search library">
+  <div class="search-overlay-top">
+    <button id="search-back" class="back-text-btn" aria-label="Close search">Back</button>
+    <input type="text" id="search-input" class="search-input" placeholder="Search your songs or artists..." autocomplete="off" />
+  </div>
+  <div id="search-results" class="search-results"></div>
+</section>
+
+<!-- ONLINE SEARCH OVERLAY -->
+<section id="online-overlay" class="search-overlay online-overlay" hidden aria-label="Online song search">
+  <div class="search-overlay-top">
+    <button id="online-back" class="back-text-btn" aria-label="Close online search">Back</button>
+    <input type="text" id="online-input" class="search-input" placeholder="Search public audio online..." autocomplete="off" />
+    <button id="online-search-btn" class="text-action small">Search</button>
+  </div>
+  <div class="online-note">Searches public audio sources. Add only music you have permission to download. You can also paste a direct legal audio URL.</div>
+  <div class="direct-url-box">
+    <input type="url" id="direct-url-input" class="modal-input" placeholder="Paste direct audio URL" />
+    <div class="inline-form-row">
+      <input type="text" id="direct-title-input" class="modal-input" placeholder="Title" />
+      <input type="text" id="direct-artist-input" class="modal-input" placeholder="Artist" />
+      <button id="direct-add-btn" class="modal-btn primary">Add URL</button>
+    </div>
+  </div>
+  <div id="online-results" class="search-results"></div>
+</section>
+
+<!-- SONG OPTIONS MODAL -->
+<div id="modal-song-options" class="modal-overlay" hidden>
+  <div class="modal-box song-options-box" role="dialog" aria-modal="true" aria-labelledby="song-options-title">
+    <div id="song-options-title" class="modal-title">Song options</div>
+    <button id="song-opt-play" class="settings-item">Play now</button>
+    <button id="song-opt-favorite" class="settings-item">Add to Favorites</button>
+    <button id="song-opt-add-list" class="settings-item">Add to playlist</button>
+    <button id="song-opt-remove-list" class="settings-item danger" hidden>Remove from this playlist</button>
+    <button id="song-opt-edit" class="settings-item">Edit info</button>
+    <button id="song-opt-delete" class="settings-item danger">Remove from device</button>
+    <button id="song-opt-cancel" class="modal-btn secondary full-width">Cancel</button>
+  </div>
+</div>
+
+<!-- RENAME MODAL -->
+<div id="modal-rename" class="modal-overlay" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="rename-modal-title">
+    <div id="rename-modal-title" class="modal-title">Edit track info</div>
+    <label class="modal-label" for="rename-title">Title</label>
+    <input type="text" id="rename-title" class="modal-input" placeholder="Track title" />
+    <label class="modal-label" for="rename-artist">Artist</label>
+    <input type="text" id="rename-artist" class="modal-input" placeholder="Artist name" />
+    <div class="modal-actions">
+      <button id="modal-cancel" class="modal-btn secondary">Cancel</button>
+      <button id="modal-save" class="modal-btn primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- NEW PLAYLIST MODAL -->
+<div id="modal-new-list" class="modal-overlay" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="new-playlist-title">
+    <div id="new-playlist-title" class="modal-title">New playlist</div>
+    <label class="modal-label" for="new-list-name">Name</label>
+    <input type="text" id="new-list-name" class="modal-input" placeholder="My playlist" />
+    <div class="modal-actions">
+      <button id="new-list-cancel" class="modal-btn secondary">Cancel</button>
+      <button id="new-list-save" class="modal-btn primary">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD TO PLAYLIST MODAL -->
+<div id="modal-add-to-list" class="modal-overlay" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="add-to-playlist-title">
+    <div id="add-to-playlist-title" class="modal-title">Add to playlist</div>
+    <div id="add-to-list-options" class="add-to-list-options"></div>
+    <button id="add-to-list-cancel" class="modal-btn secondary full-width">Cancel</button>
+  </div>
+</div>
+
+<!-- THEME MODAL -->
+<div id="modal-theme" class="modal-overlay" hidden>
+  <div class="modal-box theme-box" role="dialog" aria-modal="true" aria-labelledby="theme-title">
+    <div id="theme-title" class="modal-title">Choose a theme</div>
+    <div id="theme-options" class="theme-options" role="listbox" aria-label="Theme options"></div>
+    <button id="theme-close" class="modal-btn secondary full-width">Close</button>
+  </div>
+</div>
+
+<!-- SLEEP MODAL -->
+<div id="modal-sleep" class="modal-overlay" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="sleep-title">
+    <div id="sleep-title" class="modal-title">Sleep timer</div>
+    <div class="sleep-options">
+      <button class="sleep-opt-btn" data-minutes="15">15 min</button>
+      <button class="sleep-opt-btn" data-minutes="30">30 min</button>
+      <button class="sleep-opt-btn" data-minutes="45">45 min</button>
+      <button class="sleep-opt-btn" data-minutes="60">1 hour</button>
+      <button class="sleep-opt-btn" data-minutes="90">1.5 hours</button>
+      <button class="sleep-opt-btn" data-minutes="120">2 hours</button>
+    </div>
+    <div class="sleep-custom">
+      <label class="modal-label" for="sleep-custom-input">Custom minutes</label>
+      <div class="inline-form-row">
+        <input type="number" id="sleep-custom-input" class="modal-input" placeholder="e.g. 25" min="1" max="480" />
+        <button id="sleep-custom-set" class="modal-btn primary">Set</button>
+      </div>
+    </div>
+    <button id="modal-sleep-cancel" class="modal-btn secondary full-width">Cancel</button>
+  </div>
+</div>
+
+<div id="toast" class="toast" aria-live="polite"></div>
+<audio id="audio" preload="auto"></audio>
+
+<script src="db.js"></script>
+<script src="lyrics.js"></script>
+<script src="sleep.js"></script>
+<script src="player.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
