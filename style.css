@@ -1090,13 +1090,13 @@ body[data-theme="mono"] {
   --border: rgba(248, 250, 252, 0.12); --glow: rgba(226, 232, 240, 0.13);
   --word-b: #e2e8f0; --word-c: #cbd5e1;
 }
-body[data-theme="sleep"], body.night-mode, body[data-night="true"] {
+body[data-theme="sleep"], body.night-mode {
   --bg: #000104; --bg2: #03050a; --bg3: #060914; --card: rgba(4, 7, 14, 0.78); --card2: rgba(4, 7, 14, 0.56);
   --border: rgba(75, 85, 99, 0.16); --text: #d7dde8; --text2: #7f8898; --text3: #3f4654;
   --accent: #1e3a8a; --accent2: #64748b; --accent3: #0f172a; --glow: rgba(30, 58, 138, 0.10);
   --word-a: #e5e7eb; --word-b: #a5b4fc; --word-c: #64748b; --word-d: #94a3b8; --word-e: #818cf8; --word-f: #64748b;
 }
-body[data-night="true"]::before, body.night-mode::before { opacity: 0.18; filter: blur(18px); }
+body[data-theme="sleep"]::before, body.night-mode::before { opacity: 0.18; filter: blur(18px); }
 
 /* main learning screen */
 .learning-screen { background: radial-gradient(circle at 50% -12%, var(--glow), transparent 35%), var(--bg); }
@@ -1119,10 +1119,12 @@ body[data-night="true"]::before, body.night-mode::before { opacity: 0.18; filter
   background: rgba(255,255,255,0.055);
 }
 .learning-card {
-  flex: 1 1 auto;
-  min-height: 0;
-  margin: 2px clamp(10px, 3vw, 18px) calc(8px + var(--safe-bottom));
-  padding: clamp(12px, 3vw, 18px);
+  flex: 0 0 auto;
+  height: 62svh;
+  min-height: 320px;
+  max-height: 520px;
+  margin: 2px clamp(10px, 3vw, 18px) 0;
+  padding: clamp(10px, 2.5vw, 16px);
   display: flex;
   flex-direction: column;
   border-radius: clamp(26px, 7vw, 38px);
@@ -1135,13 +1137,14 @@ body[data-night="true"]::before, body.night-mode::before { opacity: 0.18; filter
 .learning-lyrics {
   flex: 1 1 auto;
   min-height: 0;
-  margin: 4px 0 10px;
-  padding: clamp(10px, 3vw, 18px);
+  margin: 4px 0 6px;
+  padding: clamp(8px, 2.5vw, 14px);
   justify-content: flex-start;
   align-items: stretch;
   border-radius: clamp(22px, 6vw, 34px);
-  background: linear-gradient(180deg, rgba(0,0,0,0.20), rgba(0,0,0,0.07));
+  background: transparent;
   touch-action: manipulation;
+  overflow: hidden;
 }
 .clean-empty-lyrics { gap: 10px; font-weight: 800; text-align: center; }
 .clean-empty-lyrics small { color: var(--text3); font-weight: 700; font-size: 12px; max-width: 260px; }
@@ -1159,11 +1162,11 @@ body[data-night="true"]::before, body.night-mode::before { opacity: 0.18; filter
   width: 100%;
   text-align: left;
   color: rgba(244,248,255,0.30);
-  font-size: clamp(18px, 6.2vw, 32px);
+  font-size: clamp(20px, 6.8vw, 36px);
   line-height: 1.18;
   font-weight: 800;
   letter-spacing: -0.045em;
-  padding: clamp(9px, 2.4vw, 15px) 2px;
+  padding: clamp(10px, 2.6vw, 16px) 2px;
   transition: opacity 0.22s ease, color 0.24s ease, transform 0.28s ease, filter 0.24s ease;
   opacity: 0.34;
 }
@@ -1481,7 +1484,9 @@ body[data-theme="matrix"] {
   --word-b: #86efac; --word-c: #22c55e;
 }
 
-body[data-night="true"] {
+/* Night mode — mayor especificidad para pisar cualquier tema */
+body[data-night="true"],
+body[data-theme][data-night="true"] {
   --bg: #000104;
   --bg2: #02040a;
   --bg3: #040914;
@@ -1495,8 +1500,10 @@ body[data-night="true"] {
   --accent2: #60a5fa;
   --accent3: #172554;
   --glow: rgba(30,58,138,0.16);
+  --shadow: rgba(0,0,0,0.55);
 }
-body[data-night="true"]::before { opacity: 0.18; }
+body[data-night="true"]::before,
+body[data-theme][data-night="true"]::before { opacity: 0.10; filter: blur(22px); }
 
 .screen-player.learning-screen {
   background:
