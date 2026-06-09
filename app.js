@@ -57,10 +57,10 @@ const searchResults = $('search-results');
 const searchBack = $('search-back');
 
 const adminList = $('admin-list');
-const adminCount = null; // merged into dash-total-songs
+const adminCount = $('admin-count');
 const adminSize = $('admin-size');
 const emptyState = $('empty-state');
-const btnSelect = null; // removed
+const btnSelect = $('btn-select');
 const selectBar = $('select-bar');
 const selectCount = $('select-count');
 const selectAllBtn = $('select-all-btn');
@@ -123,14 +123,14 @@ const fullscreenPlay = $('fullscreen-play');
 const fullscreenPlayIcon = $('fullscreen-play-icon');
 const btnNightMode = $('btn-night-mode');
 const btnSearchAddLocal = $('btn-search-add-local');
-const onlineSearchInput = null;
-const onlineSearchBtn = null;
-const onlineResults = null;
-const youtubeSearchBtn = null;
-const directUrlInput = null;
-const directTitleInput = null;
-const directArtistInput = null;
-const directAddBtn = null;
+const onlineSearchInput = $('online-search-input');
+const onlineSearchBtn = $('online-search-btn');
+const onlineResults = $('online-results');
+const youtubeSearchBtn = $('youtube-search-btn');
+const directUrlInput = $('direct-url-input');
+const directTitleInput = $('direct-title-input');
+const directArtistInput = $('direct-artist-input');
+const directAddBtn = $('direct-add-btn');
 const modalTrackMenu = $('modal-track-menu');
 const trackMenuTitle = $('track-menu-title');
 const trackMenuPlay = $('track-menu-play');
@@ -140,27 +140,27 @@ const trackMenuEdit = $('track-menu-edit');
 const trackMenuRemoveList = $('track-menu-remove-list');
 const trackMenuDelete = $('track-menu-delete');
 const trackMenuCancel = $('track-menu-cancel');
-const btnOnlineSearch = null;
+const btnOnlineSearch = $('btn-online-search');
 const btnListSearch = $('btn-list-search');
 const btnAdminTheme = $('btn-admin-theme');
 const btnAdminNight = $('btn-admin-night');
 const dashTotalSongs = $('dash-total-songs');
 const dashFavorites = $('dash-favorites');
-const dashPlaylists = null; // removed
+const dashPlaylists = $('dash-playlists');
 const dashShowTop = $('dash-show-top');
 const dashTopSongs = $('dash-top-songs');
-const dashTopArtists = null; // removed
+const dashTopArtists = $('dash-top-artists');
 const listAddSongsBtn = $('list-add-songs');
 const modalPickSongs = $('modal-pick-songs');
 const pickSongSearch = $('pick-song-search');
 const pickSongList = $('pick-song-list');
 const pickSongClose = $('pick-song-close');
-const youtubeQueryInput = null;
-const youtubeLinkInput = null;
-const youtubePreview = null;
-const youtubeCopyLink = null;
-const youtubeOpenY2Mate = null;
-const youtubeAddDownloaded = null;
+const youtubeQueryInput = $('youtube-query-input');
+const youtubeLinkInput = $('youtube-link-input');
+const youtubePreview = $('youtube-preview');
+const youtubeCopyLink = $('youtube-copy-link');
+const youtubeOpenY2Mate = $('youtube-open-y2mate');
+const youtubeAddDownloaded = $('youtube-add-downloaded');
 
 const LS_TAB = 'aurora_active_tab';
 const LS_SORT = 'aurora_sort_mode';
@@ -626,11 +626,14 @@ async function renderAdminList(filter = '') {
   const allTracks = applySort(Player.tracks);
   const size = await dbGetTotalSize();
   if (adminSize) adminSize.textContent = `${(size / 1024 / 1024).toFixed(1)} MB`;
+  if (adminCount) adminCount.textContent = formatSongCount(allTracks.length);
+
   const tracks = filter
     ? allTracks.filter(t =>
         (t.title || '').toLowerCase().includes(filter.toLowerCase()) ||
         (t.artist || '').toLowerCase().includes(filter.toLowerCase()))
     : allTracks;
+
   emptyState.classList.toggle('visible', allTracks.length === 0);
   adminList.innerHTML = '';
   if (!tracks.length) {
@@ -667,23 +670,6 @@ async function renderAdminList(filter = '') {
   renderDashboard();
 }
 
-// Admin search wiring
-const adminSearchInput = $('admin-search-input');
-const adminSearchClear = $('admin-search-clear');
-if (adminSearchInput) {
-  adminSearchInput.addEventListener('input', () => {
-    const q = adminSearchInput.value;
-    if (adminSearchClear) adminSearchClear.hidden = !q;
-    renderAdminList(q);
-  });
-}
-if (adminSearchClear) {
-  adminSearchClear.addEventListener('click', () => {
-    adminSearchInput.value = '';
-    adminSearchClear.hidden = true;
-    renderAdminList('');
-  });
-}
 
 async function renderDashboard() {
   if (!dashTotalSongs) return;
@@ -691,26 +677,45 @@ async function renderDashboard() {
   const favorites = tracks.filter(track => track.favorite === true).length;
   dashTotalSongs.textContent = String(tracks.length);
   if (dashFavorites) dashFavorites.textContent = String(favorites);
+  if (dashPlaylists) {
+    const playlists = await dbGetAllPlaylists();
+    dashPlaylists.textContent = String(playlists.length);
+  }
 
-  const topCard = $('dash-top-songs-card');
+  if (!dashTopSongs) return;
   const topSongs = [...tracks]
     .filter(track => Number(track.playCount || 0) > 0)
     .sort((a, b) => (b.playCount - a.playCount) || (b.lastPlayedAt - a.lastPlayedAt) || compareAZ(a, b))
     .slice(0, 5);
-  if (dashTopSongs) {
-    dashTopSongs.innerHTML = topSongs.length ? topSongs.map((track, index) => `
-      <button class="dash-mini-item" data-id="${track.id}">
+  dashTopSongs.innerHTML = topSongs.length ? topSongs.map((track, index) => `
+    <button class="dash-mini-item" data-id="${track.id}">
+      <span>${index + 1}</span>
+      <strong>${escHtml(track.title || 'Unknown')}</strong>
+      <em>${formatPlayCount(track.playCount || 0)}</em>
+    </button>
+  `).join('') : '<div class="dash-empty">No plays counted yet.</div>';
+
+  if (dashTopArtists) {
+    const artistStats = new Map();
+    tracks.forEach(track => {
+      const name = track.artist || 'Unknown';
+      const plays = Number(track.playCount || 0);
+      artistStats.set(name, (artistStats.get(name) || 0) + plays);
+    });
+    const topArtists = [...artistStats.entries()].filter(([, plays]) => plays > 0).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    dashTopArtists.innerHTML = topArtists.length ? topArtists.map(([artist, plays], index) => `
+      <div class="dash-mini-item static">
         <span>${index + 1}</span>
-        <strong>${escHtml(track.title || 'Unknown')}</strong>
-        <em>${formatPlayCount(track.playCount || 0)}</em>
-      </button>
-    `).join('') : '<div class="dash-empty">Aún no hay canciones reproducidas.</div>';
-    if (topCard) topCard.hidden = !dashShowTop?.classList.contains('active');
-    dashTopSongs.querySelectorAll('[data-id]').forEach(btn => btn.addEventListener('click', async () => {
-      showMainScreen('player');
-      await Player.playById(Number(btn.dataset.id), topSongs.map(track => track.id));
-    }));
+        <strong>${escHtml(artist)}</strong>
+        <em>${formatPlayCount(plays)}</em>
+      </div>
+    `).join('') : '<div class="dash-empty">No artist stats yet.</div>';
   }
+
+  dashTopSongs.querySelectorAll('[data-id]').forEach(btn => btn.addEventListener('click', async () => {
+    showMainScreen('player');
+    await Player.playById(Number(btn.dataset.id), topSongs.map(track => track.id));
+  }));
 }
 
 async function openPickSongsModal() {
@@ -1527,11 +1532,8 @@ if (pickSongClose) pickSongClose.addEventListener('click', () => { modalPickSong
 if (pickSongSearch) pickSongSearch.addEventListener('input', () => renderPickSongList());
 if (modalPickSongs) modalPickSongs.addEventListener('click', (event) => { if (event.target === modalPickSongs) modalPickSongs.hidden = true; });
 if (dashShowTop) dashShowTop.addEventListener('click', () => {
-  const topCard = $('dash-top-songs-card');
-  if (!topCard) return;
-  const showing = !topCard.hidden;
-  topCard.hidden = showing;
-  dashShowTop.classList.toggle('active', !showing);
+  setActiveTab('top');
+  showMainScreen('player');
 });
 listDeleteBtn.addEventListener('click', async () => {
   if (!activeListId) return;
@@ -1661,6 +1663,34 @@ Player.onTrackChange = (track) => {
 };
 
 Lyrics.onSync = updateLyricsHighlight;
+
+// ── Admin search ──────────────────────────
+const adminSearchInput = $('admin-search-input');
+const adminSearchClear = $('admin-search-clear');
+if (adminSearchInput) {
+  adminSearchInput.addEventListener('input', () => {
+    const q = adminSearchInput.value;
+    if (adminSearchClear) adminSearchClear.hidden = !q;
+    renderAdminList(q);
+  });
+}
+if (adminSearchClear) {
+  adminSearchClear.addEventListener('click', () => {
+    adminSearchInput.value = '';
+    adminSearchClear.hidden = true;
+    renderAdminList('');
+  });
+}
+
+// ── Top 10 toggle ─────────────────────────
+if (dashShowTop) {
+  dashShowTop.addEventListener('click', () => {
+    const card = $('dash-top-songs-card');
+    if (!card) return;
+    card.hidden = !card.hidden;
+    dashShowTop.classList.toggle('active', !card.hidden);
+  });
+}
 
 // ── Init ──────────────────────────────────
 (async function init() {
