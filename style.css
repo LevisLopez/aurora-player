@@ -1,1809 +1,482 @@
-/* ═══════════════════════════════════════
-   AURORA PLAYER — modern blue / black interface
-═══════════════════════════════════════ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual" />
+  <meta name="theme-color" content="#050814" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Aurora English</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
 
-:root {
-  --font-head: 'Space Grotesk', system-ui, sans-serif;
-  --font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-}
+<main class="app-shell" aria-label="Aurora English learning app">
+  <!-- MAIN LEARNING PLAYER -->
+  <section id="screen-player" class="screen screen-player active learning-screen" aria-label="Learning player screen">
+    <header class="top-bar learning-topbar minimal-topbar">
+      <div class="silent-brand" aria-hidden="true"></div>
+      <div class="top-actions minimal-actions" aria-label="Player actions">
+        <button id="btn-night-mode" class="icon-btn" aria-label="Sleep timer" title="Sleep timer"><i class="ti ti-moon-stars"></i></button>
+        <button id="btn-theme" class="icon-btn" aria-label="Color themes" title="Color themes"><i class="ti ti-palette"></i></button>
+        <button id="btn-online-search" class="icon-btn subtle-online-btn" aria-label="Online music search" title="Online search"><i class="ti ti-world-search"></i></button>
+        <button id="btn-open-admin" class="icon-btn settings-only-btn" aria-label="Open control center" title="Control center"><i class="ti ti-settings"></i></button>
+      </div>
+    </header>
 
-body {
-  --bg: #050814;
-  --bg2: #071120;
-  --bg3: #0c1b33;
-  --card: rgba(10, 24, 48, 0.76);
-  --card2: rgba(12, 32, 64, 0.56);
-  --border: rgba(125, 184, 255, 0.16);
-  --text: #f4f8ff;
-  --text2: #a9bcdd;
-  --text3: #60769c;
-  --accent: #2f80ff;
-  --accent2: #73c2ff;
-  --accent3: #00e5ff;
-  --danger: #fb7185;
-  --fav: #fb6fb8;
-  --shadow: rgba(0, 0, 0, 0.36);
-  --glow: rgba(47, 128, 255, 0.35);
-  --word-a: #ffffff;
-  --word-b: #73c2ff;
-  --word-c: #00e5ff;
-  --word-d: #9fb7ff;
-  --word-e: #c084fc;
-  --word-f: #5eead4;
-}
+    <div id="sleep-badge" class="sleep-badge" hidden>
+      <i class="ti ti-moon" aria-hidden="true"></i>
+      <span id="sleep-countdown">--:--</span>
+      <button id="sleep-cancel" class="sleep-cancel-btn" aria-label="Cancel sleep timer"><i class="ti ti-x"></i></button>
+    </div>
 
-body[data-theme="electric"] {
-  --accent: #06b6d4;
-  --accent2: #67e8f9;
-  --accent3: #22d3ee;
-  --bg: #030711;
-  --bg2: #07151d;
-  --bg3: #0b2530;
-  --border: rgba(103, 232, 249, 0.18);
-  --glow: rgba(34, 211, 238, 0.32);
-  --word-b: #67e8f9;
-  --word-c: #22d3ee;
-}
+    <section class="now-card learning-card" aria-label="Now playing and lyrics">
+      <div class="track-info compact-track-info">
+        <div id="track-title" class="track-title">No track loaded</div>
+        <div id="track-artist" class="track-artist">Add songs to get started</div>
+      </div>
 
-body[data-theme="royal"] {
-  --accent: #8b5cf6;
-  --accent2: #c4b5fd;
-  --accent3: #a78bfa;
-  --bg: #070511;
-  --bg2: #120b26;
-  --bg3: #1f1240;
-  --border: rgba(196, 181, 253, 0.18);
-  --glow: rgba(139, 92, 246, 0.34);
-  --word-b: #c4b5fd;
-  --word-c: #a78bfa;
-}
+      <div id="inline-lyrics" class="inline-lyrics learning-lyrics" aria-live="polite" title="Double tap for full screen lyrics">
+        <div id="inline-no-lyrics" class="inline-no-lyrics clean-empty-lyrics">
+          <span>Lyrics will appear here</span>
+          <small>Double tap the lyrics area for clean full screen.</small>
+        </div>
+        <div id="inline-lyrics-flow" class="lyrics-flow" aria-label="Synced lyrics"></div>
+        <div id="inline-prev-line" class="inline-line prev legacy-inline" hidden></div>
+        <div id="inline-active-line" class="inline-line active legacy-inline" hidden></div>
+        <div id="inline-next-line" class="inline-line next legacy-inline" hidden></div>
+      </div>
 
-body[data-theme="emerald"] {
-  --accent: #10b981;
-  --accent2: #6ee7b7;
-  --accent3: #34d399;
-  --bg: #030b0b;
-  --bg2: #071c18;
-  --bg3: #0b3028;
-  --border: rgba(110, 231, 183, 0.18);
-  --glow: rgba(16, 185, 129, 0.32);
-  --word-b: #6ee7b7;
-  --word-c: #34d399;
-}
+      <div class="bottom-player-panel">
+        <div class="progress-section">
+          <div class="progress-bar-wrap" id="progress-wrap" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="progress-track">
+              <div id="progress-fill" class="progress-fill"></div>
+              <div id="progress-thumb" class="progress-thumb"></div>
+            </div>
+          </div>
+          <div class="progress-times">
+            <span id="time-current">0:00</span>
+            <span id="time-total">0:00</span>
+          </div>
+        </div>
 
-body[data-theme="crimson"] {
-  --accent: #f43f5e;
-  --accent2: #fda4af;
-  --accent3: #fb7185;
-  --bg: #100408;
-  --bg2: #22070f;
-  --bg3: #3a0e1b;
-  --border: rgba(253, 164, 175, 0.18);
-  --glow: rgba(244, 63, 94, 0.34);
-  --word-b: #fda4af;
-  --word-c: #fb7185;
-}
+        <div class="controls-row clean-controls-row">
+          <button id="btn-shuffle" class="ctrl-btn" aria-label="Shuffle" title="Shuffle"><i class="ti ti-arrows-shuffle"></i></button>
+          <button id="btn-prev" class="ctrl-btn" aria-label="Previous" title="Previous"><i class="ti ti-player-skip-back"></i></button>
+          <button id="btn-play" class="play-btn" aria-label="Play or pause" title="Play / Pause"><i class="ti ti-player-play" id="play-icon"></i></button>
+          <button id="btn-next" class="ctrl-btn" aria-label="Next" title="Next"><i class="ti ti-player-skip-forward"></i></button>
+          <button id="btn-repeat" class="ctrl-btn" aria-label="Repeat" title="Repeat"><i class="ti ti-repeat"></i></button>
+        </div>
+      </div>
+    </section>
 
-body[data-theme="gold"] {
-  --accent: #f59e0b;
-  --accent2: #fcd34d;
-  --accent3: #fbbf24;
-  --bg: #0e0802;
-  --bg2: #1f1306;
-  --bg3: #33200a;
-  --border: rgba(252, 211, 77, 0.18);
-  --glow: rgba(245, 158, 11, 0.31);
-  --word-b: #fcd34d;
-  --word-c: #fbbf24;
-}
+    <section class="playlist-section main-list-section" aria-label="Song list">
+      <div class="list-topline main-list-topline">
+        <div class="playlist-tabs" role="tablist" aria-label="Library tabs">
+          <button id="tab-all" class="tab-btn active" role="tab">All</button>
+          <button id="tab-fav" class="tab-btn" role="tab"><i class="ti ti-heart"></i> Favorites</button>
+          <button id="tab-lists" class="tab-btn" role="tab"><i class="ti ti-list"></i> Playlists</button>
+          <button id="tab-top" class="tab-btn hidden-main-tab" role="tab">Top 10</button>
+        </div>
+        <button id="btn-list-search" class="icon-btn list-search-btn" aria-label="Search current list" title="Search list"><i class="ti ti-search"></i></button>
+      </div>
+      <div class="section-summary compact-summary">
+        <span id="playlist-count" class="playlist-count">0 songs</span>
+      </div>
 
-html, body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
+      <div id="playlist" class="playlist"></div>
 
-body::before {
-  content: '';
-  position: fixed;
-  inset: -20% -10% auto;
-  height: 420px;
-  background:
-    radial-gradient(circle at 20% 20%, var(--glow), transparent 34%),
-    radial-gradient(circle at 80% 10%, rgba(0, 229, 255, 0.18), transparent 32%);
-  filter: blur(10px);
-  pointer-events: none;
-  z-index: 0;
-}
+      <div id="empty-favorites" class="empty-state-soft" hidden>
+        <i class="ti ti-heart-off"></i>
+        <p>No favorites yet</p>
+        <span>Tap the heart beside a song.</span>
+      </div>
+      <div id="empty-top" class="empty-state-soft" hidden>
+        <i class="ti ti-chart-bar-off"></i>
+        <p>No listening history yet</p>
+        <span>Play songs and Aurora will build your Top 10.</span>
+      </div>
 
-button, input, select { font: inherit; }
-button { -webkit-tap-highlight-color: transparent; }
-button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
-[hidden] { display: none !important; }
+      <div id="lists-panel" class="lists-panel" hidden>
+        <div id="lists-grid" class="lists-grid"></div>
+        <button id="btn-new-list" class="btn-new-list"><i class="ti ti-plus"></i> New playlist</button>
+      </div>
 
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-}
+      <div id="list-detail" class="list-detail" hidden>
+        <div class="list-detail-header">
+          <button id="list-back" class="icon-btn" aria-label="Back to playlists"><i class="ti ti-arrow-left"></i></button>
+          <div class="list-heading">
+            <span id="list-detail-name" class="list-detail-name">Playlist</span>
+            <span id="list-detail-count" class="list-detail-count">0 songs</span>
+          </div>
+          <button id="list-add-songs" class="icon-btn" aria-label="Add songs to this playlist" title="Add songs"><i class="ti ti-playlist-add"></i></button>
+          <button id="list-delete" class="icon-btn danger" aria-label="Delete playlist" title="Delete playlist"><i class="ti ti-trash"></i></button>
+        </div>
+        <div id="list-detail-tracks" class="playlist"></div>
+        <div id="list-empty" class="empty-state-soft" hidden>
+          <i class="ti ti-music-off"></i>
+          <p>No songs in this playlist yet</p>
+          <span>Use the add button above or the three-dot menu.</span>
+        </div>
+      </div>
+    </section>
+  </section>
 
-.app-shell { position: fixed; inset: 0; z-index: 1; }
+  <!-- TRUE CLEAN FULLSCREEN LYRICS -->
+  <section id="clean-fullscreen" class="clean-fullscreen" hidden aria-label="Full screen lyrics">
+    <div id="fullscreen-lyrics-flow" class="fullscreen-lyrics-flow" aria-live="polite"></div>
+    <div id="fullscreen-empty" class="fullscreen-empty" hidden>Play a song with synced lyrics.</div>
+    <div id="fullscreen-controls" class="fullscreen-controls" hidden>
+      <button id="fullscreen-back" class="fullscreen-back" aria-label="Back to player"><i class="ti ti-arrow-left"></i></button>
+      <div class="fullscreen-timeline">
+        <span id="fullscreen-time-current">0:00</span>
+        <div id="fullscreen-progress-wrap" class="fullscreen-progress-wrap" role="slider" aria-label="Seek full screen audio">
+          <div class="fullscreen-progress-track"><div id="fullscreen-progress-fill" class="fullscreen-progress-fill"></div></div>
+        </div>
+        <span id="fullscreen-time-total">0:00</span>
+      </div>
+      <div class="fullscreen-mini-controls">
+        <button id="fullscreen-prev" class="ctrl-btn" aria-label="Previous"><i class="ti ti-player-skip-back"></i></button>
+        <button id="fullscreen-play" class="play-btn" aria-label="Play or pause"><i class="ti ti-player-play" id="fullscreen-play-icon"></i></button>
+        <button id="fullscreen-next" class="ctrl-btn" aria-label="Next"><i class="ti ti-player-skip-forward"></i></button>
+      </div>
+    </div>
+  </section>
 
-.screen {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.035), transparent 28%),
-    var(--bg);
-  transform: translateX(110%);
-  opacity: 0;
-  transition: transform 0.34s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.24s ease;
-}
-.screen.active { transform: translateX(0); opacity: 1; }
-.screen-lyrics { z-index: 70; transform: translateY(110%); }
-.screen-lyrics.active { transform: translateY(0); }
-.screen-admin { z-index: 40; }
-.screen-player { z-index: 20; }
+  <!-- LYRICS MANAGEMENT SCREEN -->
+  <section id="screen-lyrics" class="screen screen-lyrics" aria-label="Lyrics management screen">
+    <header class="lyrics-header">
+      <button id="lyrics-close" class="icon-btn" aria-label="Close lyrics"><i class="ti ti-chevron-down"></i></button>
+      <div class="lyrics-header-info">
+        <div id="lyrics-track-title" class="lyrics-track-name">—</div>
+        <div id="lyrics-track-artist" class="lyrics-track-artist">—</div>
+      </div>
+      <div class="lyrics-header-actions">
+        <button id="lyrics-upload-btn" class="icon-btn" aria-label="Upload .lrc file" title="Upload .lrc file"><i class="ti ti-upload"></i></button>
+        <button id="lyrics-fullscreen-btn" class="icon-btn" aria-label="Open clean fullscreen" title="Open clean fullscreen"><i class="ti ti-maximize"></i></button>
+        <button id="lyrics-delete-btn" class="icon-btn danger" aria-label="Delete lyrics" title="Delete lyrics" hidden><i class="ti ti-trash"></i></button>
+      </div>
+    </header>
 
-.top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: calc(18px + var(--safe-top)) 18px 10px;
-  flex-shrink: 0;
-}
+    <input type="file" id="lrc-file-input" accept=".lrc,.txt" hidden />
 
-.brand-lockup, .admin-title-block {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  font-family: var(--font-head);
-}
-.brand-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 13px;
-  box-shadow: 0 12px 30px var(--shadow), 0 0 0 1px var(--border);
-}
-.eyebrow {
-  display: block;
-  color: var(--accent2);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-.brand-lockup strong, .admin-title-block strong {
-  display: block;
-  color: var(--text);
-  font-size: 18px;
-  line-height: 1.05;
-  letter-spacing: -0.02em;
-}
+    <div class="karaoke-hint">Double tap the main lyrics area for the clean full screen mode.</div>
 
-.top-actions, .lyrics-header-actions, .select-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.icon-btn, .row-icon-btn, .ctrl-btn, .admin-btn {
-  border: 0;
-  color: var(--text2);
-  background: transparent;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.15s ease, color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
-}
-.icon-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 16px;
-  background: rgba(255,255,255,0.045);
-  border: 1px solid rgba(255,255,255,0.055);
-  backdrop-filter: blur(16px);
-  font-size: 21px;
-}
-.icon-btn:active, .ctrl-btn:active, .row-icon-btn:active, .admin-btn:active { transform: scale(0.93); }
-.icon-btn:hover, .icon-btn.lyrics-on, .icon-btn.add-btn, .icon-btn.sleep-on { color: var(--accent2); background: rgba(255,255,255,0.08); }
-.icon-btn.danger, .danger { color: var(--danger) !important; }
+    <div id="lyrics-content" class="lyrics-content">
+      <div id="lyrics-loading" class="lyrics-state" hidden>
+        <div class="lyrics-spinner"></div>
+        <p>Searching for lyrics...</p>
+      </div>
+      <div id="lyrics-not-found" class="lyrics-state" hidden>
+        <p>No lyrics found</p>
+        <span>Upload an .lrc file to add synced karaoke lyrics.</span>
+        <button id="lyrics-upload-btn2" class="lyrics-upload-btn"><i class="ti ti-upload"></i> Upload .lrc file</button>
+      </div>
+      <div id="lyrics-no-track" class="lyrics-state">
+        <p>Play a song to see lyrics</p>
+      </div>
+      <div id="lyrics-lines" class="lyrics-lines" hidden></div>
+    </div>
 
-.sleep-badge {
-  align-self: center;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  margin-top: 2px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid var(--border);
-  color: var(--accent2);
-  font-weight: 700;
-  font-size: 12px;
-}
-.sleep-cancel-btn {
-  border: 0;
-  background: transparent;
-  color: var(--text2);
-  cursor: pointer;
-  display: inline-flex;
-}
+    <div class="lyrics-mini-player">
+      <div class="lyrics-progress-wrap" id="lyrics-progress-wrap" role="slider" aria-label="Seek lyrics audio">
+        <div class="lyrics-progress-track">
+          <div id="lyrics-progress-fill" class="lyrics-progress-fill"></div>
+        </div>
+      </div>
+      <div class="lyrics-mini-times">
+        <span id="lyrics-time-current">0:00</span>
+        <span id="lyrics-time-total">0:00</span>
+      </div>
+      <div class="lyrics-mini-controls">
+        <button id="lyrics-prev" class="ctrl-btn" aria-label="Previous"><i class="ti ti-player-skip-back"></i></button>
+        <button id="lyrics-play" class="play-btn" aria-label="Play or pause"><i class="ti ti-player-play" id="lyrics-play-icon"></i></button>
+        <button id="lyrics-next" class="ctrl-btn" aria-label="Next"><i class="ti ti-player-skip-forward"></i></button>
+      </div>
+    </div>
+  </section>
 
-.now-card {
-  margin: 8px 16px 12px;
-  padding: 18px 16px 14px;
-  border-radius: 32px;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.035)),
-    var(--card);
-  border: 1px solid var(--border);
-  box-shadow: 0 24px 70px var(--shadow), inset 0 1px rgba(255,255,255,0.09);
-  flex-shrink: 0;
-  position: relative;
-  overflow: hidden;
-}
-.now-card::after {
-  content: '';
-  position: absolute;
-  right: -70px;
-  top: -80px;
-  width: 190px;
-  height: 190px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--glow), transparent 68%);
-  pointer-events: none;
-}
-.orb-artwork {
-  width: 88px;
-  height: 88px;
-  margin: 0 auto 10px;
-  border-radius: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background:
-    radial-gradient(circle at 35% 25%, rgba(255,255,255,0.26), transparent 18%),
-    linear-gradient(135deg, var(--accent), var(--accent3));
-  box-shadow: 0 18px 44px var(--glow);
-  position: relative;
-}
-.orb-note {
-  width: 62px;
-  height: 62px;
-  border-radius: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.28);
-  color: #fff;
-  font-size: 35px;
-}
-body.playing .orb-artwork { animation: pulse-art 2.2s ease-in-out infinite; }
-@keyframes pulse-art { 0%,100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+  <!-- SEARCH AND ADD SONGS INTERFACE -->
+  <section id="search-overlay" class="search-overlay song-search-screen" hidden aria-label="Search and add songs">
+    <div class="search-overlay-top">
+      <button id="search-back" class="icon-btn" aria-label="Close search"><i class="ti ti-arrow-left"></i></button>
+      <div class="search-title-group">
+        <strong>Find Music</strong>
+        <span>Search your library, add phone files, or use online references.</span>
+      </div>
+    </div>
 
-.track-info { text-align: center; min-width: 0; position: relative; z-index: 1; }
-.track-title {
-  font-family: var(--font-head);
-  font-size: clamp(20px, 5vw, 28px);
-  font-weight: 700;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  letter-spacing: -0.04em;
-}
-.track-artist { color: var(--text2); font-size: 13px; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    <div class="search-center-content">
+      <div class="search-card local-search-card">
+        <div class="search-card-heading">
+          <span>Search current library</span>
+          <button id="btn-search-add-local" class="mini-btn"><i class="ti ti-folder-plus"></i> Add from phone</button>
+        </div>
+        <input type="text" id="search-input" class="search-input" placeholder="Search saved songs or artists..." autocomplete="off" />
+        <div id="search-results" class="search-results"></div>
+      </div>
 
-.inline-lyrics {
-  min-height: 118px;
-  margin: 14px 2px 8px;
-  border-radius: 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 14px;
-  background: rgba(0,0,0,0.16);
-  border: 1px solid rgba(255,255,255,0.055);
-  cursor: pointer;
-  overflow: hidden;
-  position: relative;
-  z-index: 1;
-}
-.inline-line {
-  width: 100%;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: color 0.25s ease, font-size 0.25s ease, opacity 0.25s ease;
-}
-.inline-line.prev, .inline-line.next { color: rgba(244,248,255,0.30); font-size: 14px; line-height: 1.3; }
-.inline-line.active {
-  color: var(--text);
-  font-size: clamp(22px, 5.8vw, 32px);
-  line-height: 1.18;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  text-shadow: 0 0 24px var(--glow);
-}
-.inline-no-lyrics {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: var(--text3);
-  font-size: 13px;
-}
-.inline-no-lyrics i { font-size: 34px; opacity: 0.45; }
-.inline-no-lyrics.hidden { display: none; }
+      <div class="search-card youtube-helper-card" id="youtube-helper-card">
+        <div class="search-card-heading stacked-heading">
+          <span>YouTube helper</span>
+          <small>Search YouTube, preview a pasted link, copy it, then import the downloaded MP3 from your phone.</small>
+        </div>
+        <div class="inline-form-row">
+          <input type="text" id="youtube-query-input" class="modal-input" placeholder="Song or artist on YouTube" />
+          <button id="youtube-search-btn" class="modal-btn primary"><i class="ti ti-brand-youtube"></i> Search</button>
+        </div>
+        <label class="modal-label" for="youtube-link-input">Paste selected YouTube link</label>
+        <input type="url" id="youtube-link-input" class="modal-input" placeholder="https://www.youtube.com/watch?v=..." />
+        <div id="youtube-preview" class="youtube-preview" hidden></div>
+        <div class="youtube-helper-actions">
+          <button id="youtube-copy-link" class="mini-btn"><i class="ti ti-copy"></i> Copy link</button>
+          <button id="youtube-open-y2mate" class="mini-btn"><i class="ti ti-external-link"></i> Open MP3 page</button>
+          <button id="youtube-add-downloaded" class="mini-btn"><i class="ti ti-folder-plus"></i> Add downloaded MP3</button>
+        </div>
+        <p class="helper-note">Use this only with audio you have the right to download. The app cannot paste into external websites automatically.</p>
+      </div>
 
-.progress-section { padding: 2px 6px 0; position: relative; z-index: 1; }
-.progress-bar-wrap, .lyrics-progress-wrap { cursor: pointer; padding: 10px 0; }
-.progress-track, .lyrics-progress-track {
-  height: 7px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.12);
-  position: relative;
-  overflow: visible;
-}
-.progress-fill, .lyrics-progress-fill {
-  height: 100%;
-  width: 0%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent), var(--accent3));
-  box-shadow: 0 0 18px var(--glow);
-}
-.progress-thumb {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #fff;
-  position: absolute;
-  top: 50%;
-  left: 0%;
-  transform: translate(-50%, -50%);
-  box-shadow: 0 0 0 5px rgba(255,255,255,0.12), 0 0 20px var(--accent);
-}
-.progress-times, .lyrics-mini-times {
-  display: flex;
-  justify-content: space-between;
-  color: var(--text3);
-  font-size: 12px;
-  font-weight: 700;
-  margin-top: 2px;
-}
+      <div class="search-card online-search-card">
+        <div class="search-card-heading">
+          <span>Legal preview search</span>
+          <small>Adds short previews when the source allows browser download.</small>
+        </div>
+        <div class="inline-form-row">
+          <input type="text" id="online-search-input" class="modal-input" placeholder="Artist or song name" />
+          <button id="online-search-btn" class="modal-btn primary">Search</button>
+        </div>
+        <div id="online-results" class="online-results"></div>
+      </div>
 
-.controls-row, .lyrics-mini-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(12px, 4vw, 20px);
-  padding-top: 8px;
-  position: relative;
-  z-index: 1;
-}
-.ctrl-btn {
-  width: 45px;
-  height: 45px;
-  border-radius: 16px;
-  font-size: 24px;
-  background: rgba(255,255,255,0.045);
-}
-.ctrl-btn.on { color: var(--accent2); background: rgba(255,255,255,0.09); box-shadow: 0 0 24px var(--glow); }
-.play-btn {
-  width: 66px;
-  height: 66px;
-  border-radius: 23px;
-  border: 0;
-  cursor: pointer;
-  color: #fff;
-  font-size: 31px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--accent), var(--accent3));
-  box-shadow: 0 20px 42px var(--glow);
-  transition: transform 0.15s ease, box-shadow 0.2s ease;
-}
-.play-btn:active { transform: scale(0.94); }
+      <div class="search-card direct-url-card">
+        <div class="search-card-heading">
+          <span>Direct audio URL</span>
+          <small>Use MP3/M4A/OGG/WAV links that allow browser download.</small>
+        </div>
+        <input type="url" id="direct-url-input" class="modal-input" placeholder="https://example.com/song.mp3" />
+        <div class="inline-form-row">
+          <input type="text" id="direct-title-input" class="modal-input" placeholder="Title" />
+          <input type="text" id="direct-artist-input" class="modal-input" placeholder="Artist" />
+        </div>
+        <button id="direct-add-btn" class="modal-btn primary full-width"><i class="ti ti-download"></i> Download and add</button>
+      </div>
+    </div>
+  </section>
 
-.playlist-section {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 0 16px calc(10px + var(--safe-bottom));
-}
-.list-topline {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-.playlist-tabs {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding: 2px 0 8px;
-  flex: 1;
-}
-.playlist-tabs::-webkit-scrollbar { display: none; }
-.tab-btn {
-  flex: 0 0 auto;
-  border: 1px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.045);
-  color: var(--text2);
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.tab-btn.active { color: #fff; background: linear-gradient(135deg, rgba(47,128,255,0.45), rgba(0,229,255,0.16)); border-color: rgba(255,255,255,0.13); box-shadow: 0 10px 26px rgba(0,0,0,0.22); }
-.sort-wrap { flex-shrink: 0; }
-.sort-select {
-  max-width: 145px;
-  color: var(--text);
-  background: rgba(255,255,255,0.055);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 14px;
-  padding: 8px 10px;
-  font-size: 12px;
-  font-weight: 700;
-}
-.sort-select:disabled { opacity: 0.5; }
-.section-summary { color: var(--text3); font-size: 12px; font-weight: 700; padding: 0 4px 8px; }
+  <!-- CONTROL CENTER / SETTINGS -->
+  <section id="screen-admin" class="screen screen-admin" aria-label="Settings, library and playlists">
+    <header class="top-bar admin-top">
+      <button id="btn-back" class="icon-btn" aria-label="Back"><i class="ti ti-arrow-left"></i></button>
+      <div class="admin-title-block">
+        <span class="eyebrow">Control Center</span>
+        <strong>Dashboard</strong>
+      </div>
+      <div class="top-actions compact-admin-actions">
+        <button id="btn-import" class="icon-btn" aria-label="Import backup" title="Import backup"><i class="ti ti-database-import"></i></button>
+        <button id="btn-export" class="icon-btn" aria-label="Export backup" title="Export backup"><i class="ti ti-database-export"></i></button>
+        <button id="btn-select" class="icon-btn" aria-label="Select songs" title="Select songs"><i class="ti ti-checkbox"></i></button>
+      </div>
+    </header>
 
-.playlist, .admin-list, .lists-grid, .search-results {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
-.playlist { flex: 1; display: flex; flex-direction: column; gap: 6px; padding-bottom: 18px; min-height: 0; }
-.playlist::-webkit-scrollbar, .admin-list::-webkit-scrollbar, .lists-grid::-webkit-scrollbar, .search-results::-webkit-scrollbar { width: 3px; }
-.playlist::-webkit-scrollbar-thumb, .admin-list::-webkit-scrollbar-thumb, .lists-grid::-webkit-scrollbar-thumb, .search-results::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+    <input type="file" id="import-file-input" accept=".json,application/json" hidden />
+    <input type="file" id="file-input" accept="audio/*,.mp3,.mp4,.m4a,.ogg,.oga,.opus,.wav,.flac,.aac,.weba,.webm" multiple hidden />
 
-.playlist-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 20px;
-  background: rgba(255,255,255,0.035);
-  border: 1px solid rgba(255,255,255,0.045);
-  cursor: pointer;
-  min-height: 62px;
-  transition: background 0.18s ease, transform 0.15s ease, border-color 0.18s ease;
-}
-.playlist-item:hover, .playlist-item.active { background: rgba(255,255,255,0.075); border-color: var(--border); }
-.playlist-item:active { transform: scale(0.99); }
-.pl-num {
-  width: 24px;
-  text-align: center;
-  color: var(--text3);
-  font-size: 12px;
-  font-weight: 900;
-  flex-shrink: 0;
-}
-.pl-info { flex: 1; min-width: 0; }
-.pl-title { color: var(--text); font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pl-artist { color: var(--text3); font-size: 12px; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pl-dur { color: var(--text3); font-size: 12px; font-weight: 800; min-width: 38px; text-align: right; }
-.row-icon-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
-  font-size: 18px;
-  flex-shrink: 0;
-}
-.row-icon-btn:hover { background: rgba(255,255,255,0.07); color: var(--text); }
-.fav-btn.on { color: var(--fav); }
-.playing-bars {
-  width: 24px;
-  height: 22px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 3px;
-  flex-shrink: 0;
-}
-.playing-bars span {
-  width: 4px;
-  height: 8px;
-  border-radius: 999px;
-  background: linear-gradient(var(--accent2), var(--accent));
-  animation: bar-pulse 0.72s ease-in-out infinite alternate;
-}
-.playing-bars span:nth-child(2) { animation-delay: 0.16s; }
-.playing-bars span:nth-child(3) { animation-delay: 0.32s; }
-body:not(.playing) .playing-bars span { animation-play-state: paused; height: 9px; }
-@keyframes bar-pulse { from { height: 6px; } to { height: 22px; } }
+    <section class="control-center-scroll">
+      <section class="dashboard-panel" aria-label="Listening dashboard">
+        <div class="dashboard-grid">
+          <div class="dash-card"><span>Songs</span><strong id="dash-total-songs">0</strong></div>
+          <div class="dash-card"><span>Favorites</span><strong id="dash-favorites">0</strong></div>
+          <div class="dash-card"><span>Playlists</span><strong id="dash-playlists">0</strong></div>
+          <button id="dash-show-top" class="dash-card dash-button" type="button"><span>Top 10</span><strong><i class="ti ti-chart-bar"></i></strong></button>
+        </div>
+        <div class="dashboard-lists">
+          <div class="dashboard-list-card">
+            <h3>Most played songs</h3>
+            <div id="dash-top-songs" class="dash-mini-list"></div>
+          </div>
+          <div class="dashboard-list-card">
+            <h3>Most played artists</h3>
+            <div id="dash-top-artists" class="dash-mini-list"></div>
+          </div>
+        </div>
+      </section>
 
-.empty-state-soft, .empty-state, .lists-empty {
-  flex: 1;
-  min-height: 180px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-align: center;
-  color: var(--text3);
-  padding: 28px;
-}
-.empty-state-soft i, .empty-state i, .lists-empty i { font-size: 44px; opacity: 0.5; }
-.empty-state-soft p, .empty-state p, .lists-empty p { color: var(--text); font-weight: 800; }
-.empty-state-soft span, .empty-state span, .lists-empty span { font-size: 13px; }
+      <div class="quick-actions-grid" aria-label="Quick actions">
+        <button id="btn-add-song" class="quick-action-card add-btn" aria-label="Add songs"><i class="ti ti-folder-plus"></i><span>Add local songs</span></button>
+        <button id="btn-search" class="quick-action-card" aria-label="Find music"><i class="ti ti-world-search"></i><span>Find music</span></button>
+        <button id="btn-admin-theme" class="quick-action-card" aria-label="Theme"><i class="ti ti-palette"></i><span>Themes</span></button>
+        <button id="btn-admin-night" class="quick-action-card" aria-label="Night mode"><i class="ti ti-moon-stars"></i><span>Night mode</span></button>
+        <button id="btn-sleep" class="quick-action-card" aria-label="Sleep timer"><i class="ti ti-clock-moon"></i><span>Sleep timer</span></button>
+        <button id="btn-lyrics" class="quick-action-card" aria-label="Lyrics tools"><i class="ti ti-file-music"></i><span>Lyrics tools</span></button>
+      </div>
 
-.lists-panel, .list-detail { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.lists-grid { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; }
-.list-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 22px;
-  background: rgba(255,255,255,0.045);
-  border: 1px solid rgba(255,255,255,0.055);
-  cursor: pointer;
-}
-.list-card-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 23px;
-  background: linear-gradient(135deg, var(--accent), var(--accent3));
-  box-shadow: 0 12px 28px var(--glow);
-}
-.list-card-info { flex: 1; min-width: 0; }
-.list-card-title { font-weight: 900; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.list-card-sub { margin-top: 3px; color: var(--text3); font-size: 12px; font-weight: 700; }
-.list-card-arrow { color: var(--text3); }
-.btn-new-list {
-  border: 0;
-  border-radius: 19px;
-  padding: 14px 18px;
-  color: #fff;
-  background: linear-gradient(135deg, var(--accent), var(--accent3));
-  box-shadow: 0 18px 38px var(--glow);
-  font-weight: 900;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.list-detail-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.055);
-  margin-bottom: 8px;
-  flex-shrink: 0;
-}
-.list-heading { flex: 1; min-width: 0; }
-.list-detail-name { display: block; font-weight: 900; font-family: var(--font-head); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.list-detail-count { color: var(--text3); font-size: 12px; font-weight: 700; }
+      <section class="settings-panel" aria-label="Display options">
+        <div class="settings-row">
+          <div>
+            <strong>Song order</strong>
+            <span>Choose how All and Favorites are listed.</span>
+          </div>
+          <div class="sort-wrap">
+            <label class="sr-only" for="sort-select">Sort songs</label>
+            <select id="sort-select" class="sort-select" aria-label="Sort songs">
+              <option value="recent">Recently added</option>
+              <option value="az">A–Z</option>
+            </select>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div>
+            <strong>Downloaded songs</strong>
+            <span>Everything is saved locally in this device browser.</span>
+          </div>
+          <span id="admin-count" class="pill-stat">0 songs</span>
+        </div>
+        <div class="settings-row">
+          <div>
+            <strong>Storage used</strong>
+            <span>Export a backup before changing phones or browsers.</span>
+          </div>
+          <span id="admin-size" class="pill-stat">0 MB used</span>
+        </div>
+      </section>
 
-.screen-admin .top-bar { padding-bottom: 12px; }
-.admin-info {
-  display: flex;
-  justify-content: space-between;
-  color: var(--text3);
-  font-size: 12px;
-  font-weight: 800;
-  padding: 0 20px 10px;
-}
-.admin-list {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 0 16px calc(16px + var(--safe-bottom));
-}
-.admin-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 22px;
-  background: rgba(255,255,255,0.045);
-  border: 1px solid rgba(255,255,255,0.055);
-}
-.admin-item.selected { background: rgba(47,128,255,0.18); border-color: var(--accent); }
-.admin-thumb {
-  width: 46px;
-  height: 46px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--accent2);
-  background: rgba(255,255,255,0.065);
-  font-size: 23px;
-}
-.admin-info-col { flex: 1; min-width: 0; }
-.admin-title { color: var(--text); font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.admin-artist { margin-top: 3px; color: var(--text3); font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.admin-actions { display: flex; gap: 4px; }
-.admin-btn { width: 36px; height: 36px; border-radius: 12px; font-size: 19px; }
-.admin-btn:hover { background: rgba(255,255,255,0.07); color: var(--text); }
-.empty-state { display: none; }
-.empty-state.visible { display: flex; }
-.select-bar {
-  margin: 0 16px 12px;
-  padding: 10px;
-  border-radius: 18px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.select-count { color: var(--accent2); font-weight: 900; font-size: 13px; }
-.select-checkbox {
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border);
-  color: transparent;
-}
-.select-checkbox.checked { background: var(--accent); color: #fff; border-color: var(--accent); }
-.mini-btn {
-  border: 0;
-  border-radius: 12px;
-  padding: 8px 11px;
-  color: var(--text);
-  background: rgba(255,255,255,0.075);
-  font-weight: 900;
-  font-size: 12px;
-  cursor: pointer;
-}
-.mini-btn.danger { background: rgba(251,113,133,0.15); }
+      <div id="select-bar" class="select-bar" hidden>
+        <span id="select-count" class="select-count">0 selected</span>
+        <div class="select-actions">
+          <button id="select-all-btn" class="mini-btn">All</button>
+          <button id="select-delete-btn" class="mini-btn danger"><i class="ti ti-trash"></i> Delete</button>
+          <button id="select-cancel-btn" class="mini-btn">Cancel</button>
+        </div>
+      </div>
 
-.search-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg);
-  padding: calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom));
-}
-.search-overlay-top { display: flex; align-items: center; gap: 10px; flex-shrink: 0; padding-bottom: 12px; }
-.search-input, .modal-input {
-  width: 100%;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.06);
-  color: var(--text);
-  border-radius: 16px;
-  padding: 13px 15px;
-  outline: none;
-}
-.search-input::placeholder, .modal-input::placeholder { color: var(--text3); }
-.search-results { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
-.search-empty { color: var(--text3); text-align: center; padding: 50px 20px; font-weight: 700; }
+      <section class="admin-search-section">
+        <div class="admin-search-wrap">
+          <i class="ti ti-search admin-search-icon"></i>
+          <input type="text" id="admin-search-input" class="admin-search-input" placeholder="Buscar canciones o artistas..." autocomplete="off" />
+          <button id="admin-search-clear" class="admin-search-clear" hidden aria-label="Limpiar"><i class="ti ti-x"></i></button>
+        </div>
+      </section>
 
-/* Lyrics screen */
-.screen-lyrics {
-  background:
-    radial-gradient(circle at 50% 0%, var(--glow), transparent 38%),
-    linear-gradient(180deg, #02040b, var(--bg));
-}
-.lyrics-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: calc(16px + var(--safe-top)) 16px 6px;
-  flex-shrink: 0;
-}
-.lyrics-header-info { flex: 1; min-width: 0; text-align: center; }
-.lyrics-track-name { font-weight: 900; font-family: var(--font-head); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lyrics-track-artist { color: var(--text3); font-size: 12px; font-weight: 700; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.karaoke-hint {
-  align-self: center;
-  color: var(--text3);
-  font-size: 12px;
-  font-weight: 800;
-  padding: 4px 12px 6px;
-  flex-shrink: 0;
-}
-.lyrics-content {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
-  padding: 8px clamp(18px, 5vw, 42px) 140px;
-}
-.lyrics-content::-webkit-scrollbar { display: none; }
-.lyrics-state {
-  min-height: 55vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 10px;
-  color: var(--text3);
-  padding: 24px;
-}
-.lyrics-state i { font-size: 54px; opacity: 0.5; }
-.lyrics-state p { color: var(--text); font-weight: 900; font-size: 18px; }
-.lyrics-state span { max-width: 280px; font-size: 13px; }
-.lyrics-spinner {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: 3px solid rgba(255,255,255,0.12);
-  border-top-color: var(--accent2);
-  animation: spin 0.85s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.lyrics-upload-btn {
-  margin-top: 8px;
-  border: 0;
-  border-radius: 16px;
-  padding: 12px 16px;
-  color: #fff;
-  background: linear-gradient(135deg, var(--accent), var(--accent3));
-  font-weight: 900;
-  cursor: pointer;
-}
-.lyrics-lines {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: clamp(10px, 2.2vh, 22px);
-  padding: 28vh 0 40vh;
-}
-.lyric-line {
-  font-family: var(--font-head);
-  font-size: clamp(28px, 7.8vw, 62px);
-  line-height: 1.15;
-  font-weight: 800;
-  letter-spacing: -0.055em;
-  color: rgba(244,248,255,0.22);
-  cursor: pointer;
-  transition: transform 0.28s ease, color 0.28s ease, opacity 0.28s ease, filter 0.28s ease;
-  text-wrap: balance;
-}
-.lyric-line.active {
-  color: var(--text);
-  transform: scale(1.045);
-  filter: drop-shadow(0 0 26px var(--glow));
-}
-.lyric-line.past { color: rgba(244,248,255,0.34); }
-.lyric-line.future { opacity: 0.62; }
-.lyric-word {
-  display: inline-block;
-  padding: 0 0.025em;
-  transition: color 0.16s ease, transform 0.16s ease, opacity 0.16s ease, text-shadow 0.16s ease;
-}
-.word-color-0.current-word { color: var(--word-a); }
-.word-color-1.current-word { color: var(--word-b); }
-.word-color-2.current-word { color: var(--word-c); }
-.word-color-3.current-word { color: var(--word-d); }
-.word-color-4.current-word { color: var(--word-e); }
-.word-color-5.current-word { color: var(--word-f); }
-.current-word {
-  transform: translateY(-0.08em) scale(1.08);
-  text-shadow: 0 0 20px currentColor, 0 0 40px var(--glow);
-}
-.past-word { color: rgba(244,248,255,0.78); }
-.future-word { color: rgba(244,248,255,0.28); }
-.inline-line .past-word { color: rgba(244,248,255,0.78); }
-.inline-line .future-word { color: rgba(244,248,255,0.38); }
-.lyrics-mini-player {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 14px 22px calc(18px + var(--safe-bottom));
-  background: linear-gradient(180deg, transparent, rgba(2,4,11,0.88) 18%, rgba(2,4,11,0.98));
-  border-top: 1px solid rgba(255,255,255,0.055);
-}
-.lyrics-mini-player .play-btn { width: 58px; height: 58px; border-radius: 20px; font-size: 27px; }
-.lyrics-mini-player .ctrl-btn { background: rgba(255,255,255,0.06); }
+      <section class="admin-management-block" aria-label="Downloaded songs management">
+        <div id="admin-list" class="admin-list"></div>
+        <div id="empty-state" class="empty-state">
+          <i class="ti ti-music-off"></i>
+          <p>No songs yet</p>
+          <span>Use Add local songs or Find music.</span>
+        </div>
+      </section>
+    </section>
+  </section>
+</main>
 
-body.lyrics-fullscreen .screen-lyrics,
-body.lyrics-cinema .screen-lyrics {
-  z-index: 999;
-}
-body.lyrics-fullscreen .lyrics-header,
-body.lyrics-cinema .lyrics-header { padding-top: calc(10px + var(--safe-top)); }
-body.lyrics-fullscreen .karaoke-hint,
-body.lyrics-cinema .karaoke-hint { display: none; }
-body.lyrics-fullscreen .lyric-line,
-body.lyrics-cinema .lyric-line { font-size: clamp(40px, 9.5vw, 92px); }
-body.lyrics-fullscreen .lyrics-mini-player,
-body.lyrics-cinema .lyrics-mini-player { opacity: 0.96; }
+<!-- RENAME MODAL -->
+<div id="modal-rename" class="modal-overlay" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="rename-modal-title">
+    <div id="rename-modal-title" class="modal-title">Edit track info</div>
+    <label class="modal-label" for="rename-title">Title</label>
+    <input type="text" id="rename-title" class="modal-input" placeholder="Track title" />
+    <label class="modal-label" for="rename-artist">Artist</label>
+    <input type="text" id="rename-artist" class="modal-input" placeholder="Artist name" />
+    <div class="modal-actions">
+      <button id="modal-cancel" class="modal-btn secondary">Cancel</button>
+      <button id="modal-save" class="modal-btn primary">Save</button>
+    </div>
+  </div>
+</div>
 
-/* Modals */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 150;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 22px;
-  background: rgba(0,0,0,0.62);
-  backdrop-filter: blur(14px);
-}
-.modal-box {
-  width: min(420px, 100%);
-  max-height: min(82vh, 680px);
-  overflow-y: auto;
-  border-radius: 28px;
-  padding: 22px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.095), rgba(255,255,255,0.045)), var(--bg2);
-  border: 1px solid var(--border);
-  box-shadow: 0 30px 90px rgba(0,0,0,0.55);
-}
-.modal-title {
-  font-family: var(--font-head);
-  font-size: 20px;
-  font-weight: 900;
-  letter-spacing: -0.04em;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-.modal-title i { color: var(--accent2); }
-.modal-label {
-  display: block;
-  color: var(--text3);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 11px;
-  font-weight: 900;
-  margin: 14px 0 7px;
-}
-.modal-actions { display: flex; gap: 10px; margin-top: 18px; }
-.modal-btn {
-  flex: 1;
-  border: 0;
-  border-radius: 16px;
-  padding: 13px 15px;
-  font-weight: 900;
-  cursor: pointer;
-  color: var(--text);
-  background: rgba(255,255,255,0.075);
-}
-.modal-btn.primary { color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent3)); box-shadow: 0 14px 30px var(--glow); }
-.modal-btn.secondary { color: var(--text2); }
-.full-width { width: 100%; margin-top: 12px; }
-.add-to-list-options, .theme-options, .sleep-options {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.add-to-list-opt, .theme-option, .sleep-opt-btn {
-  width: 100%;
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 17px;
-  padding: 13px 14px;
-  background: rgba(255,255,255,0.055);
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  text-align: left;
-  font-weight: 800;
-}
-.add-to-list-opt small { margin-left: auto; color: var(--text3); font-size: 11px; }
-.add-to-list-opt i { color: var(--accent2); font-size: 20px; }
-.theme-option.active { border-color: var(--accent); background: rgba(255,255,255,0.09); }
-.theme-option i { margin-left: auto; color: var(--accent2); }
-.theme-swatch {
-  width: 30px;
-  height: 30px;
-  border-radius: 12px;
-  background: radial-gradient(circle at 30% 25%, #fff8, transparent 25%), var(--swatch);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--swatch), transparent 50%);
-}
-.sleep-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.sleep-opt-btn { justify-content: center; }
-.inline-form-row { display: flex; gap: 10px; align-items: center; }
-.inline-form-row .modal-btn { flex: 0 0 auto; }
+<!-- NEW PLAYLIST MODAL -->
+<div id="modal-new-list" class="modal-overlay" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="new-playlist-title">
+    <div id="new-playlist-title" class="modal-title"><i class="ti ti-list"></i> New playlist</div>
+    <label class="modal-label" for="new-list-name">Name</label>
+    <input type="text" id="new-list-name" class="modal-input" placeholder="My playlist" />
+    <div class="modal-actions">
+      <button id="new-list-cancel" class="modal-btn secondary">Cancel</button>
+      <button id="new-list-save" class="modal-btn primary">Create</button>
+    </div>
+  </div>
+</div>
 
-.toast {
-  position: fixed;
-  left: 50%;
-  bottom: calc(22px + var(--safe-bottom));
-  z-index: 300;
-  transform: translate(-50%, 90px);
-  opacity: 0;
-  pointer-events: none;
-  padding: 12px 18px;
-  border-radius: 999px;
-  max-width: min(90vw, 520px);
-  color: var(--text);
-  font-weight: 800;
-  font-size: 13px;
-  white-space: nowrap;
-  background: rgba(10, 20, 36, 0.92);
-  border: 1px solid var(--border);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-  backdrop-filter: blur(16px);
-  transition: transform 0.25s ease, opacity 0.25s ease;
-}
-.toast.show { transform: translate(-50%, 0); opacity: 1; }
+<!-- ADD TO PLAYLIST MODAL -->
+<div id="modal-add-to-list" class="modal-overlay" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="add-to-playlist-title">
+    <div id="add-to-playlist-title" class="modal-title"><i class="ti ti-list-plus"></i> Add to playlist</div>
+    <div id="add-to-list-options" class="add-to-list-options"></div>
+    <button id="add-to-list-cancel" class="modal-btn secondary full-width">Cancel</button>
+  </div>
+</div>
 
-.fade-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 250;
-  pointer-events: none;
-  background: #000;
-  opacity: 0;
-  transition: opacity 30s linear;
-}
-.fade-overlay.fading { opacity: 0.72; }
-body.night-mode::before { opacity: 0.35; }
+<!-- PICK SONGS FOR PLAYLIST MODAL -->
+<div id="modal-pick-songs" class="modal-overlay" hidden>
+  <div class="modal-box pick-songs-box" role="dialog" aria-modal="true" aria-labelledby="pick-songs-title">
+    <div id="pick-songs-title" class="modal-title"><i class="ti ti-playlist-add"></i> Add songs to playlist</div>
+    <input type="text" id="pick-song-search" class="modal-input" placeholder="Search songs to add..." />
+    <div id="pick-song-list" class="pick-song-list"></div>
+    <button id="pick-song-close" class="modal-btn secondary full-width">Close</button>
+  </div>
+</div>
 
-@media (min-width: 720px) {
-  .screen-player, .screen-admin, .screen-lyrics {
-    max-width: 520px;
-    left: 50%;
-    transform: translateX(calc(-50% + 110%));
-    border-left: 1px solid rgba(255,255,255,0.06);
-    border-right: 1px solid rgba(255,255,255,0.06);
-  }
-  .screen-player.active, .screen-admin.active { transform: translateX(-50%); }
-  .screen-lyrics { transform: translate(-50%, 110%); }
-  .screen-lyrics.active { transform: translate(-50%, 0); }
-  body.lyrics-fullscreen .screen-lyrics { max-width: none; left: 0; transform: none; }
-}
+<!-- TRACK MENU MODAL -->
+<div id="modal-track-menu" class="modal-overlay" hidden>
+  <div class="modal-box track-menu-box" role="dialog" aria-modal="true" aria-labelledby="track-menu-title">
+    <div id="track-menu-title" class="modal-title">Song options</div>
+    <div class="track-menu-actions">
+      <button id="track-menu-play" class="track-menu-action"><i class="ti ti-player-play"></i> Play</button>
+      <button id="track-menu-fav" class="track-menu-action"><i class="ti ti-heart"></i> Add to Favorites</button>
+      <button id="track-menu-add-list" class="track-menu-action"><i class="ti ti-list-plus"></i> Add to playlist</button>
+      <button id="track-menu-edit" class="track-menu-action"><i class="ti ti-pencil"></i> Edit info</button>
+      <button id="track-menu-remove-list" class="track-menu-action danger" hidden><i class="ti ti-x"></i> Remove from this playlist</button>
+      <button id="track-menu-delete" class="track-menu-action danger"><i class="ti ti-trash"></i> Delete from device</button>
+    </div>
+    <button id="track-menu-cancel" class="modal-btn secondary full-width">Cancel</button>
+  </div>
+</div>
 
-@media (max-height: 760px) {
-  .orb-artwork { width: 72px; height: 72px; border-radius: 24px; }
-  .orb-note { width: 52px; height: 52px; font-size: 29px; }
-  .inline-lyrics { min-height: 92px; }
-  .play-btn { width: 58px; height: 58px; border-radius: 20px; }
-  .now-card { padding-top: 14px; }
-}
+<!-- THEME MODAL -->
+<div id="modal-theme" class="modal-overlay" hidden>
+  <div class="modal-box theme-box" role="dialog" aria-modal="true" aria-labelledby="theme-title">
+    <div id="theme-title" class="modal-title"><i class="ti ti-palette"></i> Theme</div>
+    <div id="theme-options" class="theme-options" role="listbox" aria-label="Theme options"></div>
+    <button id="theme-close" class="modal-btn secondary full-width">Close</button>
+  </div>
+</div>
 
-/* ═══════════════════════════════════════
-   LEARNING UPDATE — clean main screen + fullscreen lyrics
-═══════════════════════════════════════ */
-body[data-theme="ocean"] {
-  --accent: #0284c7; --accent2: #7dd3fc; --accent3: #38bdf8;
-  --bg: #020817; --bg2: #061528; --bg3: #082f49; --card: rgba(8, 31, 54, 0.72);
-  --border: rgba(125, 211, 252, 0.18); --glow: rgba(56, 189, 248, 0.32);
-  --word-b: #7dd3fc; --word-c: #38bdf8;
-}
-body[data-theme="arctic"] {
-  --accent: #60a5fa; --accent2: #dbeafe; --accent3: #93c5fd;
-  --bg: #07111f; --bg2: #0d1b2e; --bg3: #102847; --card: rgba(17, 37, 65, 0.68);
-  --border: rgba(219, 234, 254, 0.18); --glow: rgba(147, 197, 253, 0.26);
-  --word-b: #dbeafe; --word-c: #93c5fd;
-}
-body[data-theme="neon"] {
-  --accent: #22c55e; --accent2: #bef264; --accent3: #14b8a6;
-  --bg: #020904; --bg2: #06150b; --bg3: #0b2a18; --card: rgba(7, 32, 18, 0.76);
-  --border: rgba(190, 242, 100, 0.18); --glow: rgba(34, 197, 94, 0.34);
-  --word-b: #bef264; --word-c: #5eead4;
-}
-body[data-theme="sunset"] {
-  --accent: #f97316; --accent2: #fdba74; --accent3: #ec4899;
-  --bg: #120606; --bg2: #24100b; --bg3: #3b1712; --card: rgba(52, 20, 13, 0.74);
-  --border: rgba(253, 186, 116, 0.18); --glow: rgba(249, 115, 22, 0.32);
-  --word-b: #fdba74; --word-c: #f9a8d4;
-}
-body[data-theme="rose"] {
-  --accent: #e11d48; --accent2: #fda4af; --accent3: #fb7185;
-  --bg: #10040a; --bg2: #210714; --bg3: #3a0c21; --card: rgba(47, 11, 26, 0.72);
-  --border: rgba(253, 164, 175, 0.18); --glow: rgba(225, 29, 72, 0.32);
-  --word-b: #fda4af; --word-c: #fb7185;
-}
-body[data-theme="lava"] {
-  --accent: #ef4444; --accent2: #fca5a5; --accent3: #fb923c;
-  --bg: #0f0503; --bg2: #220b07; --bg3: #3a120c; --card: rgba(45, 13, 8, 0.74);
-  --border: rgba(252, 165, 165, 0.18); --glow: rgba(239, 68, 68, 0.32);
-  --word-b: #fca5a5; --word-c: #fdba74;
-}
-body[data-theme="forest"] {
-  --accent: #16a34a; --accent2: #86efac; --accent3: #22c55e;
-  --bg: #030a06; --bg2: #07170c; --bg3: #0e2a18; --card: rgba(8, 34, 18, 0.74);
-  --border: rgba(134, 239, 172, 0.18); --glow: rgba(34, 197, 94, 0.28);
-  --word-b: #86efac; --word-c: #4ade80;
-}
-body[data-theme="mint"] {
-  --accent: #0d9488; --accent2: #99f6e4; --accent3: #2dd4bf;
-  --bg: #03100f; --bg2: #07201d; --bg3: #0b3732; --card: rgba(8, 42, 38, 0.72);
-  --border: rgba(153, 246, 228, 0.18); --glow: rgba(45, 212, 191, 0.28);
-  --word-b: #99f6e4; --word-c: #5eead4;
-}
-body[data-theme="amber"] {
-  --accent: #d97706; --accent2: #fde68a; --accent3: #f59e0b;
-  --bg: #0d0802; --bg2: #1d1306; --bg3: #33210a; --card: rgba(43, 27, 8, 0.72);
-  --border: rgba(253, 230, 138, 0.18); --glow: rgba(245, 158, 11, 0.28);
-  --word-b: #fde68a; --word-c: #fbbf24;
-}
-body[data-theme="graphite"] {
-  --accent: #64748b; --accent2: #cbd5e1; --accent3: #94a3b8;
-  --bg: #06070a; --bg2: #101216; --bg3: #1b2028; --card: rgba(23, 27, 34, 0.74);
-  --border: rgba(203, 213, 225, 0.14); --glow: rgba(148, 163, 184, 0.20);
-  --word-b: #cbd5e1; --word-c: #94a3b8;
-}
-body[data-theme="grape"] {
-  --accent: #a855f7; --accent2: #e9d5ff; --accent3: #d946ef;
-  --bg: #090411; --bg2: #180a26; --bg3: #2c1041; --card: rgba(37, 15, 57, 0.72);
-  --border: rgba(233, 213, 255, 0.18); --glow: rgba(168, 85, 247, 0.32);
-  --word-b: #e9d5ff; --word-c: #f0abfc;
-}
-body[data-theme="coral"] {
-  --accent: #fb7185; --accent2: #fecdd3; --accent3: #f97316;
-  --bg: #100507; --bg2: #220b0f; --bg3: #3a1218; --card: rgba(49, 15, 21, 0.74);
-  --border: rgba(254, 205, 211, 0.18); --glow: rgba(251, 113, 133, 0.30);
-  --word-b: #fecdd3; --word-c: #fed7aa;
-}
-body[data-theme="indigo"] {
-  --accent: #4f46e5; --accent2: #c7d2fe; --accent3: #6366f1;
-  --bg: #050611; --bg2: #0d1024; --bg3: #171c3f; --card: rgba(19, 23, 56, 0.74);
-  --border: rgba(199, 210, 254, 0.18); --glow: rgba(99, 102, 241, 0.32);
-  --word-b: #c7d2fe; --word-c: #a5b4fc;
-}
-body[data-theme="mono"] {
-  --accent: #f8fafc; --accent2: #e2e8f0; --accent3: #94a3b8;
-  --bg: #030304; --bg2: #0c0d0f; --bg3: #17181c; --card: rgba(15, 16, 20, 0.78);
-  --border: rgba(248, 250, 252, 0.12); --glow: rgba(226, 232, 240, 0.13);
-  --word-b: #e2e8f0; --word-c: #cbd5e1;
-}
-body[data-theme="sleep"], body.night-mode {
-  --bg: #000104; --bg2: #03050a; --bg3: #060914; --card: rgba(4, 7, 14, 0.78); --card2: rgba(4, 7, 14, 0.56);
-  --border: rgba(75, 85, 99, 0.16); --text: #d7dde8; --text2: #7f8898; --text3: #3f4654;
-  --accent: #1e3a8a; --accent2: #64748b; --accent3: #0f172a; --glow: rgba(30, 58, 138, 0.10);
-  --word-a: #e5e7eb; --word-b: #a5b4fc; --word-c: #64748b; --word-d: #94a3b8; --word-e: #818cf8; --word-f: #64748b;
-}
-body[data-theme="sleep"]::before, body.night-mode::before { opacity: 0.18; filter: blur(18px); }
+<!-- SLEEP MODAL -->
+<div id="modal-sleep" class="modal-overlay" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="sleep-title">
+    <div id="sleep-title" class="modal-title"><i class="ti ti-moon"></i> Sleep timer</div>
+    <div class="sleep-options">
+      <button class="sleep-opt-btn" data-minutes="15">15 min</button>
+      <button class="sleep-opt-btn" data-minutes="30">30 min</button>
+      <button class="sleep-opt-btn" data-minutes="45">45 min</button>
+      <button class="sleep-opt-btn" data-minutes="60">1 hour</button>
+      <button class="sleep-opt-btn" data-minutes="90">1.5 hours</button>
+      <button class="sleep-opt-btn" data-minutes="120">2 hours</button>
+    </div>
+    <div class="sleep-custom">
+      <label class="modal-label" for="sleep-custom-input">Custom minutes</label>
+      <div class="inline-form-row">
+        <input type="number" id="sleep-custom-input" class="modal-input" placeholder="e.g. 25" min="1" max="480" />
+        <button id="sleep-custom-set" class="modal-btn primary">Set</button>
+      </div>
+    </div>
+    <button id="modal-sleep-cancel" class="modal-btn secondary full-width">Cancel</button>
+  </div>
+</div>
 
-/* main learning screen */
-.learning-screen { background: radial-gradient(circle at 50% -12%, var(--glow), transparent 35%), var(--bg); }
-.learning-topbar {
-  padding: calc(14px + var(--safe-top)) clamp(14px, 4vw, 22px) 8px;
-  min-height: calc(68px + var(--safe-top));
-}
-.learning-title-block { min-width: 0; }
-.learning-title-block strong {
-  display: block;
-  font-family: var(--font-head);
-  font-size: clamp(17px, 4.8vw, 22px);
-  letter-spacing: -0.03em;
-}
-.settings-only-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 18px;
-  color: var(--text);
-  background: rgba(255,255,255,0.055);
-}
-.learning-card {
-  flex: 0 0 auto;
-  height: 62svh;
-  min-height: 320px;
-  max-height: 520px;
-  margin: 2px clamp(10px, 3vw, 18px) 0;
-  padding: clamp(10px, 2.5vw, 16px);
-  display: flex;
-  flex-direction: column;
-  border-radius: clamp(26px, 7vw, 38px);
-}
-.learning-card::after { opacity: 0.55; transform: scale(1.35); }
-.orb-artwork, .brand-icon, .brand-lockup img { display: none !important; }
-.compact-track-info { flex-shrink: 0; padding: 0 clamp(2px, 2vw, 12px) 8px; }
-.compact-track-info .track-title { font-size: clamp(18px, 5vw, 28px); }
-.compact-track-info .track-artist { font-size: clamp(12px, 3.4vw, 14px); }
-.learning-lyrics {
-  flex: 1 1 auto;
-  min-height: 0;
-  margin: 4px 0 6px;
-  padding: clamp(8px, 2.5vw, 14px);
-  justify-content: flex-start;
-  align-items: stretch;
-  border-radius: clamp(22px, 6vw, 34px);
-  background: transparent;
-  touch-action: manipulation;
-  overflow: hidden;
-}
-.clean-empty-lyrics { gap: 10px; font-weight: 800; text-align: center; }
-.clean-empty-lyrics small { color: var(--text3); font-weight: 700; font-size: 12px; max-width: 260px; }
-.clean-empty-lyrics i { display: none; }
-.lyrics-flow {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  scroll-behavior: smooth;
-  padding: 36vh 0 42vh;
-  mask-image: linear-gradient(180deg, transparent 0%, #000 11%, #000 88%, transparent 100%);
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 11%, #000 88%, transparent 100%);
-}
-.lyrics-flow .flow-line {
-  width: 100%;
-  text-align: left;
-  color: rgba(244,248,255,0.30);
-  font-size: clamp(20px, 6.8vw, 36px);
-  line-height: 1.18;
-  font-weight: 800;
-  letter-spacing: -0.045em;
-  padding: clamp(10px, 2.6vw, 16px) 2px;
-  transition: opacity 0.22s ease, color 0.24s ease, transform 0.28s ease, filter 0.24s ease;
-  opacity: 0.34;
-}
-.lyrics-flow .flow-line.active {
-  color: var(--text);
-  opacity: 1;
-  transform: translateX(0) scale(1.03);
-  filter: drop-shadow(0 0 18px var(--glow));
-}
-.lyrics-flow .flow-line.past { opacity: 0.20; transform: translateY(-2px) scale(0.98); }
-.lyrics-flow .flow-line.future { opacity: 0.36; }
-.lyrics-flow .flow-line .lyric-word { display: inline-block; margin: 0 0.09em 0.12em 0; }
-.bottom-player-panel { flex-shrink: 0; }
-.clean-controls-row { padding-top: 5px; gap: clamp(10px, 4vw, 20px); }
-.clean-controls-row .ctrl-btn { background: rgba(255,255,255,0.035); }
-.clean-controls-row .play-btn { width: clamp(58px, 16vw, 72px); height: clamp(58px, 16vw, 72px); }
-.legacy-inline { display: none !important; }
+<div id="toast" class="toast" aria-live="polite"></div>
+<audio id="audio" preload="auto"></audio>
 
-/* clean fullscreen */
-.clean-fullscreen {
-  position: fixed;
-  inset: 0;
-  z-index: 220;
-  background: #000;
-  color: var(--text);
-  overflow: hidden;
-  opacity: 0;
-  transform: scale(0.985);
-  transition: opacity 0.28s ease, transform 0.28s ease;
-  touch-action: manipulation;
-}
-.clean-fullscreen.active { opacity: 1; transform: scale(1); }
-.fullscreen-lyrics-flow {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  padding: 48vh clamp(18px, 6vw, 56px) 46vh;
-  scroll-behavior: smooth;
-  mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 88%, transparent 100%);
-}
-.fullscreen-lyrics-flow .flow-line {
-  color: rgba(255,255,255,0.30);
-  opacity: 0.32;
-  font-size: clamp(25px, 8.6vw, 62px);
-  line-height: 1.13;
-  font-weight: 900;
-  letter-spacing: -0.055em;
-  padding: clamp(12px, 3vw, 22px) 0;
-  transition: opacity 0.22s ease, color 0.24s ease, transform 0.28s ease, filter 0.24s ease;
-}
-.fullscreen-lyrics-flow .flow-line.active { color: #fff; opacity: 1; transform: scale(1.025); filter: drop-shadow(0 0 24px var(--glow)); }
-.fullscreen-lyrics-flow .flow-line.past { opacity: 0.16; transform: translateY(-3px) scale(0.985); }
-.fullscreen-lyrics-flow .flow-line.future { opacity: 0.32; }
-.fullscreen-lyrics-flow .lyric-word { display: inline-block; margin: 0 0.10em 0.14em 0; }
-.fullscreen-empty {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: rgba(255,255,255,0.45);
-  font-weight: 800;
-  text-align: center;
-  padding: 30px;
-}
-.fullscreen-controls {
-  position: absolute;
-  left: max(14px, env(safe-area-inset-left, 0px));
-  right: max(14px, env(safe-area-inset-right, 0px));
-  bottom: max(18px, env(safe-area-inset-bottom, 0px));
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 14px;
-  border-radius: 26px;
-  background: rgba(0,0,0,0.58);
-  border: 1px solid rgba(255,255,255,0.12);
-  backdrop-filter: blur(18px);
-  transform: translateY(16px);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.22s ease, transform 0.22s ease;
-}
-.fullscreen-controls.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
-.fullscreen-back {
-  position: absolute;
-  left: 12px;
-  top: calc(-58px - env(safe-area-inset-top, 0px));
-  width: 50px;
-  height: 50px;
-  border: 0;
-  border-radius: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  background: rgba(0,0,0,0.56);
-  backdrop-filter: blur(14px);
-  font-size: 26px;
-}
-.fullscreen-timeline { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; color: rgba(255,255,255,0.72); font-weight: 800; font-size: 12px; }
-.fullscreen-progress-wrap { padding: 14px 0; cursor: pointer; }
-.fullscreen-progress-track { height: 7px; border-radius: 999px; background: rgba(255,255,255,0.22); overflow: hidden; }
-.fullscreen-progress-fill { width: 0%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent2), #fff); box-shadow: 0 0 16px var(--glow); }
-.fullscreen-mini-controls { display: flex; align-items: center; justify-content: center; gap: clamp(18px, 7vw, 34px); }
-.fullscreen-mini-controls .ctrl-btn { background: rgba(255,255,255,0.08); color: #fff; }
-.fullscreen-mini-controls .play-btn { background: #fff; color: #000; box-shadow: none; }
-.clean-fullscreen.controls-visible .fullscreen-controls { opacity: 1; transform: translateY(0); pointer-events: auto; }
-
-/* control center */
-.screen-admin { background: radial-gradient(circle at 50% -20%, var(--glow), transparent 34%), var(--bg); }
-.control-center-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(18px + var(--safe-bottom));
-}
-.control-center-scroll::-webkit-scrollbar { width: 0; }
-.quick-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 9px;
-  padding: 2px 16px 14px;
-}
-.quick-action-card {
-  min-height: 74px;
-  border: 1px solid rgba(255,255,255,0.065);
-  border-radius: 22px;
-  background: rgba(255,255,255,0.045);
-  color: var(--text);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  font-weight: 900;
-  font-size: 12px;
-  cursor: pointer;
-}
-.quick-action-card i { font-size: 24px; color: var(--accent2); }
-.quick-action-card.active, .quick-action-card:hover { background: rgba(255,255,255,0.075); border-color: var(--border); }
-.admin-playlist-section { min-height: 48vh; padding-bottom: 14px; }
-.admin-management-block { padding-top: 6px; }
-.admin-management-block::before {
-  content: 'Storage management';
-  display: block;
-  color: var(--text3);
-  font-size: 12px;
-  font-weight: 900;
-  padding: 0 20px 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.compact-admin-actions { gap: 4px; }
-.admin-item .admin-thumb i { display: none; }
-.admin-thumb::before { content: ''; width: 20px; height: 20px; border-radius: 7px; background: linear-gradient(135deg, var(--accent), var(--accent3)); box-shadow: 0 0 18px var(--glow); }
-
-/* song search */
-.song-search-screen { overflow-y: auto; }
-.search-title-group { flex: 1; min-width: 0; }
-.search-title-group strong { display: block; font-family: var(--font-head); font-size: clamp(20px, 5vw, 26px); line-height: 1.05; }
-.search-title-group span { display: block; color: var(--text3); font-size: 12px; font-weight: 700; margin-top: 3px; }
-.search-center-content { display: flex; flex-direction: column; gap: 12px; padding-bottom: 20px; }
-.search-card {
-  border: 1px solid rgba(255,255,255,0.07);
-  background: rgba(255,255,255,0.045);
-  border-radius: 26px;
-  padding: 13px;
-  box-shadow: 0 16px 44px rgba(0,0,0,0.18);
-}
-.search-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 2px 10px; color: var(--text); font-weight: 900; }
-.search-card-heading small { color: var(--text3); font-size: 11px; font-weight: 700; text-align: right; }
-.online-results { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; }
-.online-result-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 18px;
-  background: rgba(0,0,0,0.16);
-  border: 1px solid rgba(255,255,255,0.055);
-}
-.online-artwork { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; background: rgba(255,255,255,0.07); flex-shrink: 0; }
-.online-info { flex: 1; min-width: 0; }
-.online-title { font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.online-artist { color: var(--text3); font-size: 12px; font-weight: 700; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.online-result-item .mini-btn { flex-shrink: 0; }
-.direct-url-card .inline-form-row { margin-top: 9px; }
-.direct-url-card .modal-btn { margin-top: 10px; }
-
-/* three-dot song menu */
-.track-menu-actions { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 14px; }
-.track-menu-action {
-  border: 0;
-  border-radius: 16px;
-  padding: 13px 14px;
-  background: rgba(255,255,255,0.055);
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 900;
-  cursor: pointer;
-  text-align: left;
-}
-.track-menu-action i { color: var(--accent2); font-size: 21px; }
-.track-menu-action.danger { background: rgba(251,113,133,0.12); }
-.track-menu-action.danger i { color: var(--danger); }
-.row-menu-btn { color: var(--text2); }
-.row-menu-btn i { pointer-events: none; }
-
-/* word colors and active word contrast */
-.lyric-word { transition: color 0.12s ease, opacity 0.12s ease, transform 0.16s ease, text-shadow 0.16s ease; }
-.lyric-word.future-word { opacity: 0.48; color: inherit; }
-.lyric-word.past-word { opacity: 0.78; }
-.lyric-word.current-word {
-  opacity: 1;
-  color: #fff !important;
-  transform: translateY(-0.06em) scale(1.045);
-  text-shadow: 0 0 18px currentColor, 0 0 30px var(--glow);
-}
-.word-color-0.past-word { color: var(--word-a); }
-.word-color-1.past-word { color: var(--word-b); }
-.word-color-2.past-word { color: var(--word-c); }
-.word-color-3.past-word { color: var(--word-d); }
-.word-color-4.past-word { color: var(--word-e); }
-.word-color-5.past-word { color: var(--word-f); }
-
-@media (max-width: 390px) {
-  .quick-actions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .learning-topbar { padding-left: 12px; padding-right: 12px; }
-  .learning-card { margin-left: 8px; margin-right: 8px; }
-  .lyrics-flow .flow-line { font-size: clamp(18px, 7vw, 29px); }
-  .fullscreen-lyrics-flow .flow-line { font-size: clamp(27px, 9.3vw, 52px); }
-}
-@media (min-width: 760px) {
-  .clean-fullscreen { max-width: 520px; left: 50%; right: auto; width: 100%; transform: translateX(-50%) scale(0.985); margin: 0 auto; border-left: 1px solid rgba(255,255,255,0.06); border-right: 1px solid rgba(255,255,255,0.06); }
-  .clean-fullscreen.active { transform: translateX(-50%) scale(1); }
-}
-
-/* ═══════════════════════════════════════
-   Aurora English — clean learning layout update
-═══════════════════════════════════════ */
-body[data-theme="cosmic"] {
-  --accent: #2563eb; --accent2: #60a5fa; --accent3: #38bdf8;
-  --bg: #020617; --bg2: #07111f; --bg3: #0f1f38;
-  --border: rgba(96,165,250,0.18); --glow: rgba(37,99,235,0.34);
-  --word-b: #60a5fa; --word-c: #38bdf8;
-}
-body[data-theme="ultraviolet"] {
-  --accent: #7c3aed; --accent2: #c084fc; --accent3: #f0abfc;
-  --bg: #090313; --bg2: #160724; --bg3: #2a1040;
-  --border: rgba(192,132,252,0.20); --glow: rgba(124,58,237,0.36);
-  --word-b: #c084fc; --word-c: #f0abfc;
-}
-body[data-theme="cyberpunk"] {
-  --accent: #f0f000; --accent2: #22d3ee; --accent3: #ff2bd6;
-  --bg: #050309; --bg2: #0f0b18; --bg3: #241333;
-  --border: rgba(34,211,238,0.20); --glow: rgba(255,43,214,0.28);
-  --word-b: #f0f000; --word-c: #22d3ee;
-}
-body[data-theme="ruby"] {
-  --accent: #be123c; --accent2: #fb7185; --accent3: #fda4af;
-  --bg: #080205; --bg2: #17050b; --bg3: #2d0a15;
-  --border: rgba(251,113,133,0.18); --glow: rgba(190,18,60,0.36);
-  --word-b: #fb7185; --word-c: #fda4af;
-}
-body[data-theme="sapphire"] {
-  --accent: #0ea5e9; --accent2: #7dd3fc; --accent3: #38bdf8;
-  --bg: #020617; --bg2: #061622; --bg3: #0a2638;
-  --border: rgba(125,211,252,0.20); --glow: rgba(14,165,233,0.32);
-  --word-b: #7dd3fc; --word-c: #38bdf8;
-}
-body[data-theme="jade"] {
-  --accent: #059669; --accent2: #34d399; --accent3: #99f6e4;
-  --bg: #020807; --bg2: #061712; --bg3: #0b2a20;
-  --border: rgba(52,211,153,0.20); --glow: rgba(5,150,105,0.33);
-  --word-b: #34d399; --word-c: #99f6e4;
-}
-body[data-theme="peach"] {
-  --accent: #fb923c; --accent2: #fdba74; --accent3: #f97316;
-  --bg: #0d0704; --bg2: #1c1008; --bg3: #321d0d;
-  --border: rgba(253,186,116,0.20); --glow: rgba(251,146,60,0.30);
-  --word-b: #fdba74; --word-c: #f97316;
-}
-body[data-theme="plum"] {
-  --accent: #c026d3; --accent2: #f0abfc; --accent3: #e879f9;
-  --bg: #0a0310; --bg2: #17081f; --bg3: #2b0e3a;
-  --border: rgba(240,171,252,0.18); --glow: rgba(192,38,211,0.34);
-  --word-b: #f0abfc; --word-c: #e879f9;
-}
-body[data-theme="steel"] {
-  --accent: #64748b; --accent2: #cbd5e1; --accent3: #94a3b8;
-  --bg: #030712; --bg2: #0b111d; --bg3: #172033;
-  --border: rgba(203,213,225,0.16); --glow: rgba(100,116,139,0.28);
-  --word-b: #cbd5e1; --word-c: #94a3b8;
-}
-body[data-theme="coffee"] {
-  --accent: #a16207; --accent2: #facc15; --accent3: #ca8a04;
-  --bg: #070403; --bg2: #150e08; --bg3: #2b1c0d;
-  --border: rgba(250,204,21,0.16); --glow: rgba(161,98,7,0.30);
-  --word-b: #facc15; --word-c: #ca8a04;
-}
-body[data-theme="aurora"] {
-  --accent: #22d3ee; --accent2: #a78bfa; --accent3: #5eead4;
-  --bg: #030712; --bg2: #0a1020; --bg3: #10213a;
-  --border: rgba(167,139,250,0.20); --glow: rgba(34,211,238,0.30);
-  --word-b: #a78bfa; --word-c: #5eead4;
-}
-body[data-theme="matrix"] {
-  --accent: #22c55e; --accent2: #86efac; --accent3: #16a34a;
-  --bg: #000402; --bg2: #031008; --bg3: #071c0f;
-  --border: rgba(134,239,172,0.16); --glow: rgba(34,197,94,0.28);
-  --word-b: #86efac; --word-c: #22c55e;
-}
-
-/* Night mode — mayor especificidad para pisar cualquier tema */
-body[data-night="true"],
-body[data-theme][data-night="true"] {
-  --bg: #000104;
-  --bg2: #02040a;
-  --bg3: #040914;
-  --card: rgba(3, 8, 18, 0.88);
-  --card2: rgba(3, 7, 14, 0.70);
-  --border: rgba(100,116,139,0.10);
-  --text: #e5e7eb;
-  --text2: #7c8798;
-  --text3: #445066;
-  --accent: #1e3a8a;
-  --accent2: #60a5fa;
-  --accent3: #172554;
-  --glow: rgba(30,58,138,0.16);
-  --shadow: rgba(0,0,0,0.55);
-}
-body[data-night="true"]::before,
-body[data-theme][data-night="true"]::before { opacity: 0.10; filter: blur(22px); }
-
-.screen-player.learning-screen {
-  background:
-    radial-gradient(circle at 50% -10%, var(--glow), transparent 34%),
-    linear-gradient(180deg, rgba(255,255,255,0.025), transparent 22%),
-    var(--bg);
-}
-.minimal-topbar {
-  justify-content: flex-end;
-  padding: calc(10px + var(--safe-top)) clamp(12px, 4vw, 22px) 6px;
-  min-height: calc(60px + var(--safe-top));
-}
-.silent-brand { flex: 1; min-width: 0; }
-.minimal-actions { gap: clamp(6px, 2.4vw, 10px); }
-.minimal-actions .icon-btn {
-  width: clamp(39px, 11vw, 48px);
-  height: clamp(39px, 11vw, 48px);
-  border-radius: clamp(15px, 4.5vw, 19px);
-  background: rgba(255,255,255,0.042);
-  border-color: rgba(255,255,255,0.055);
-  color: var(--text2);
-}
-.minimal-actions .settings-only-btn { color: var(--text); }
-.subtle-online-btn { color: var(--accent2) !important; }
-
-.learning-card {
-  flex: 0 0 clamp(330px, 54vh, 520px);
-  min-height: 0;
-  margin: 3px clamp(10px, 3.2vw, 18px) 8px;
-  padding: clamp(11px, 3vw, 17px);
-  border-radius: clamp(25px, 6vw, 36px);
-}
-.learning-card .track-info { padding-bottom: clamp(5px, 1.8vw, 9px); }
-.compact-track-info .track-title { font-size: clamp(18px, 5.2vw, 28px); }
-.compact-track-info .track-artist { font-size: clamp(12px, 3.5vw, 15px); color: var(--text2); }
-.learning-lyrics {
-  margin: 3px 0 8px;
-  border: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.20), rgba(0,0,0,0.045));
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.045);
-}
-.lyrics-flow {
-  padding: 46% 0 48%;
-}
-.lyrics-flow .flow-line {
-  text-align: center;
-  font-size: clamp(21px, 6.9vw, 36px);
-  line-height: 1.12;
-  font-weight: 900;
-  letter-spacing: -0.06em;
-  padding: clamp(10px, 2.5vw, 16px) clamp(2px, 1vw, 8px);
-}
-.lyrics-flow .flow-line.active { transform: scale(1.025); }
-.bottom-player-panel .progress-section { padding-left: 4px; padding-right: 4px; }
-.clean-controls-row { padding-top: 4px; }
-.clean-controls-row .ctrl-btn {
-  width: clamp(40px, 12vw, 50px);
-  height: clamp(40px, 12vw, 50px);
-  border-radius: clamp(14px, 4vw, 18px);
-}
-.clean-controls-row .play-btn {
-  width: clamp(58px, 16vw, 70px);
-  height: clamp(58px, 16vw, 70px);
-  border-radius: clamp(20px, 5vw, 25px);
-}
-
-.main-list-section {
-  flex: 1 1 auto;
-  min-height: 132px;
-  padding: 0 clamp(12px, 3.5vw, 18px) calc(10px + var(--safe-bottom));
-}
-.main-list-topline {
-  align-items: center;
-  gap: 8px;
-}
-.main-list-section .playlist-tabs {
-  padding: 0 0 6px;
-}
-.main-list-section .tab-btn {
-  padding: 8px 13px;
-  font-size: clamp(12px, 3.25vw, 13px);
-  background: rgba(255,255,255,0.050);
-}
-.hidden-main-tab { display: none !important; }
-.list-search-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 15px;
-  flex: 0 0 auto;
-  background: rgba(255,255,255,0.050);
-}
-.compact-summary { padding: 0 6px 6px; }
-.main-list-section .playlist {
-  gap: 7px;
-  padding-bottom: calc(12px + var(--safe-bottom));
-}
-.main-list-section .playlist-item {
-  min-height: clamp(58px, 15vw, 70px);
-  padding: 10px clamp(10px, 3vw, 14px);
-  border-radius: 20px;
-  background: rgba(255,255,255,0.040);
-}
-.main-list-section .playlist-item.active {
-  background: linear-gradient(135deg, rgba(255,255,255,0.082), rgba(255,255,255,0.040));
-  box-shadow: inset 3px 0 0 var(--accent);
-}
-.pl-title { font-size: clamp(14px, 3.8vw, 16px); }
-.pl-artist { font-size: clamp(11px, 3vw, 13px); }
-.row-fav-btn { color: var(--text3); }
-.row-fav-btn.on { color: var(--fav); background: rgba(251,111,184,0.10); }
-.row-fav-btn.on i { filter: drop-shadow(0 0 8px rgba(251,111,184,0.45)); }
-.row-menu-btn { color: var(--text3); }
-
-.fullscreen-lyrics-flow {
-  padding: 42vh clamp(18px, 6vw, 56px) 50vh;
-  display: block;
-}
-.fullscreen-lyrics-flow .flow-line { text-align: center; }
-.fullscreen-controls { bottom: max(14px, env(safe-area-inset-bottom, 0px)); }
-
-.dashboard-panel, .settings-panel {
-  margin: 0 16px 14px;
-  padding: 14px;
-  border: 1px solid rgba(255,255,255,0.065);
-  border-radius: 26px;
-  background: rgba(255,255,255,0.042);
-  box-shadow: 0 18px 52px rgba(0,0,0,0.16);
-}
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-.dash-card {
-  min-height: 72px;
-  border: 1px solid rgba(255,255,255,0.065);
-  border-radius: 20px;
-  background: rgba(0,0,0,0.14);
-  color: var(--text);
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  text-align: left;
-}
-.dash-card span { color: var(--text3); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; }
-.dash-card strong { font-size: clamp(19px, 5vw, 28px); line-height: 1; font-weight: 900; color: var(--text); }
-.dash-button { border: 1px solid rgba(255,255,255,0.085); cursor: pointer; }
-.dash-button strong { color: var(--accent2); }
-.dashboard-lists { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
-.dashboard-list-card {
-  min-width: 0;
-  border: 1px solid rgba(255,255,255,0.055);
-  border-radius: 20px;
-  background: rgba(0,0,0,0.12);
-  padding: 11px;
-}
-.dashboard-list-card h3 { font-size: 12px; font-weight: 900; color: var(--text2); margin-bottom: 8px; }
-.dash-mini-list { display: flex; flex-direction: column; gap: 6px; }
-.dash-mini-item {
-  width: 100%;
-  border: 0;
-  border-radius: 13px;
-  padding: 8px;
-  background: rgba(255,255,255,0.045);
-  color: var(--text);
-  display: grid;
-  grid-template-columns: 20px 1fr auto;
-  align-items: center;
-  gap: 8px;
-  text-align: left;
-  cursor: pointer;
-}
-.dash-mini-item.static { cursor: default; }
-.dash-mini-item span { color: var(--text3); font-size: 11px; font-weight: 900; }
-.dash-mini-item strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-.dash-mini-item em { color: var(--text3); font-size: 10px; font-style: normal; font-weight: 800; }
-.dash-empty { color: var(--text3); font-size: 12px; font-weight: 700; padding: 8px 2px; }
-.settings-panel { display: flex; flex-direction: column; gap: 10px; }
-.settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 10px;
-  border-radius: 18px;
-  background: rgba(0,0,0,0.12);
-}
-.settings-row strong { display: block; font-size: 13px; }
-.settings-row span { display: block; color: var(--text3); font-size: 11px; font-weight: 700; margin-top: 2px; }
-.pill-stat {
-  color: var(--accent2) !important;
-  background: rgba(255,255,255,0.052);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 999px;
-  padding: 7px 10px;
-  white-space: nowrap;
-}
-.admin-management-block::before { content: 'Downloaded songs'; }
-
-.youtube-helper-card .stacked-heading { align-items: flex-start; flex-direction: column; }
-.youtube-preview {
-  margin-top: 10px;
-  border-radius: 20px;
-  overflow: hidden;
-  background: #000;
-  border: 1px solid rgba(255,255,255,0.08);
-  aspect-ratio: 16 / 9;
-}
-.youtube-preview iframe { width: 100%; height: 100%; border: 0; display: block; }
-.youtube-helper-actions { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 10px; }
-.youtube-helper-actions .mini-btn { flex: 1 1 130px; justify-content: center; }
-.helper-note { color: var(--text3); font-size: 11px; font-weight: 700; line-height: 1.35; margin-top: 10px; }
-
-.pick-songs-box { max-height: min(84vh, 720px); display: flex; flex-direction: column; }
-.pick-song-list {
-  min-height: 160px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  margin: 10px 0 12px;
-}
-.pick-song-item {
-  border: 0;
-  border-radius: 16px;
-  padding: 11px 12px;
-  background: rgba(255,255,255,0.052);
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  cursor: pointer;
-  text-align: left;
-}
-.pick-song-item span { min-width: 0; }
-.pick-song-item strong, .pick-song-item em { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pick-song-item strong { font-size: 13px; }
-.pick-song-item em { color: var(--text3); font-style: normal; font-size: 11px; margin-top: 3px; }
-.pick-song-item i { color: var(--accent2); font-size: 20px; }
-
-@media (max-width: 430px) {
-  .learning-card { flex-basis: clamp(320px, 52vh, 450px); }
-  .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dashboard-lists { grid-template-columns: 1fr; }
-  .main-list-section .playlist-item { gap: 8px; }
-  .pl-dur { display: none; }
-  .row-icon-btn { width: 32px; height: 32px; }
-}
-
-@media (max-height: 700px) {
-  .minimal-topbar { min-height: calc(52px + var(--safe-top)); padding-top: calc(8px + var(--safe-top)); }
-  .learning-card { flex-basis: clamp(300px, 50vh, 380px); }
-  .clean-controls-row .ctrl-btn { width: 38px; height: 38px; font-size: 21px; }
-  .clean-controls-row .play-btn { width: 56px; height: 56px; }
-  .lyrics-flow .flow-line { font-size: clamp(19px, 6.3vw, 31px); }
-}
-.icon-btn.active { color: var(--accent2); background: rgba(255,255,255,0.085); box-shadow: 0 0 22px var(--glow); }
-
-/* ── Admin search bar ── */
-.admin-search-section {
-  padding: 4px 16px 2px;
-  flex-shrink: 0;
-}
-.admin-search-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 0 12px;
-  transition: border-color 0.2s;
-}
-.admin-search-wrap:focus-within { border-color: var(--accent); }
-.admin-search-icon { color: var(--text3); font-size: 16px; flex-shrink: 0; }
-.admin-search-input {
-  flex: 1;
-  background: none;
-  border: none;
-  outline: none;
-  color: var(--text);
-  font-size: 14px;
-  font-family: var(--font-body);
-  padding: 11px 0;
-}
-.admin-search-input::placeholder { color: var(--text3); }
-.admin-search-clear {
-  background: none;
-  border: none;
-  color: var(--text3);
-  cursor: pointer;
-  font-size: 16px;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-}
-/* Top songs card toggle */
-#dash-top-songs-card { display: block; }
-#dash-top-songs-card[hidden] { display: none; }
-/* admin-size inside dash-card */
-#admin-size { font-size: 13px; font-weight: 600; }
+<script src="db.js"></script>
+<script src="lyrics.js"></script>
+<script src="sleep.js"></script>
+<script src="player.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
