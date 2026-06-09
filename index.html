@@ -22,7 +22,7 @@
     <header class="top-bar learning-topbar minimal-topbar">
       <div class="silent-brand" aria-hidden="true"></div>
       <div class="top-actions minimal-actions" aria-label="Player actions">
-        <button id="btn-night-mode" class="icon-btn" aria-label="Night mode" title="Night mode"><i class="ti ti-moon-stars"></i></button>
+        <button id="btn-night-mode" class="icon-btn" aria-label="Sleep timer" title="Sleep timer"><i class="ti ti-moon-stars"></i></button>
         <button id="btn-theme" class="icon-btn" aria-label="Color themes" title="Color themes"><i class="ti ti-palette"></i></button>
         <button id="btn-online-search" class="icon-btn subtle-online-btn" aria-label="Online music search" title="Online search"><i class="ti ti-world-search"></i></button>
         <button id="btn-open-admin" class="icon-btn settings-only-btn" aria-label="Open control center" title="Control center"><i class="ti ti-settings"></i></button>
@@ -281,6 +281,7 @@
         <button id="btn-import" class="icon-btn" aria-label="Import backup" title="Import backup"><i class="ti ti-database-import"></i></button>
         <button id="btn-export" class="icon-btn" aria-label="Export backup" title="Export backup"><i class="ti ti-database-export"></i></button>
         <button id="btn-select" class="icon-btn" aria-label="Select songs" title="Select songs"><i class="ti ti-checkbox"></i></button>
+        <label id="btn-add-song-header" class="icon-btn add-btn" title="Add songs" style="cursor:pointer" for="file-input"><i class="ti ti-plus"></i></label>
       </div>
     </header>
 
@@ -292,7 +293,7 @@
         <div class="dashboard-grid">
           <div class="dash-card"><span>Songs</span><strong id="dash-total-songs">0</strong></div>
           <div class="dash-card"><span>Favorites</span><strong id="dash-favorites">0</strong></div>
-          <div class="dash-card"><span>Playlists</span><strong id="dash-playlists">0</strong></div>
+          <div class="dash-card" style="display:none"><span>Playlists</span><strong id="dash-playlists">0</strong></div>
           <button id="dash-show-top" class="dash-card dash-button" type="button"><span>Top 10</span><strong><i class="ti ti-chart-bar"></i></strong></button>
         </div>
         <div class="dashboard-lists">
@@ -300,20 +301,20 @@
             <h3>Most played songs</h3>
             <div id="dash-top-songs" class="dash-mini-list"></div>
           </div>
-          <div class="dashboard-list-card">
+          <div class="dashboard-list-card" style="display:none">
             <h3>Most played artists</h3>
             <div id="dash-top-artists" class="dash-mini-list"></div>
           </div>
         </div>
       </section>
 
-      <div class="quick-actions-grid" aria-label="Quick actions">
+      <div class="quick-actions-grid" aria-label="Quick actions" style="display:none">
         <button id="btn-add-song" class="quick-action-card add-btn" aria-label="Add songs"><i class="ti ti-folder-plus"></i><span>Add local songs</span></button>
-        <button id="btn-search" class="quick-action-card" aria-label="Find music"><i class="ti ti-world-search"></i><span>Find music</span></button>
-        <button id="btn-admin-theme" class="quick-action-card" aria-label="Theme"><i class="ti ti-palette"></i><span>Themes</span></button>
-        <button id="btn-admin-night" class="quick-action-card" aria-label="Night mode"><i class="ti ti-moon-stars"></i><span>Night mode</span></button>
-        <button id="btn-sleep" class="quick-action-card" aria-label="Sleep timer"><i class="ti ti-clock-moon"></i><span>Sleep timer</span></button>
-        <button id="btn-lyrics" class="quick-action-card" aria-label="Lyrics tools"><i class="ti ti-file-music"></i><span>Lyrics tools</span></button>
+        <button id="btn-search" class="quick-action-card" aria-label="Find music" style="display:none"><i class="ti ti-world-search"></i><span>Find music</span></button>
+        <button id="btn-admin-theme" class="quick-action-card" aria-label="Theme" style="display:none"><i class="ti ti-palette"></i><span>Themes</span></button>
+        <button id="btn-admin-night" class="quick-action-card" aria-label="Night mode" style="display:none"><i class="ti ti-moon-stars"></i><span>Night mode</span></button>
+        <button id="btn-sleep" class="quick-action-card" aria-label="Sleep timer" style="display:none"><i class="ti ti-clock-moon"></i><span>Sleep timer</span></button>
+        <button id="btn-lyrics" class="quick-action-card" aria-label="Lyrics tools" style="display:none"><i class="ti ti-file-music"></i><span>Lyrics tools</span></button>
       </div>
 
       <section class="settings-panel" aria-label="Display options">
@@ -330,7 +331,7 @@
             </select>
           </div>
         </div>
-        <div class="settings-row">
+        <div class="settings-row" style="display:none">
           <div>
             <strong>Downloaded songs</strong>
             <span>Everything is saved locally in this device browser.</span>
@@ -354,6 +355,14 @@
           <button id="select-cancel-btn" class="mini-btn">Cancel</button>
         </div>
       </div>
+
+      <section class="admin-search-section">
+        <div class="admin-search-wrap">
+          <i class="ti ti-search admin-search-icon"></i>
+          <input type="text" id="admin-search-input" class="admin-search-input" placeholder="Buscar canciones o artistas..." autocomplete="off" />
+          <button id="admin-search-clear" class="admin-search-clear" hidden aria-label="Limpiar"><i class="ti ti-x"></i></button>
+        </div>
+      </section>
 
       <section class="admin-management-block" aria-label="Downloaded songs management">
         <div id="admin-list" class="admin-list"></div>
