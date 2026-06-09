@@ -43,18 +43,15 @@
     </div>
 
     <section class="now-card" aria-label="Now playing">
-      <div class="orb-artwork" aria-hidden="true">
-        <div class="orb-note"><i class="ti ti-music"></i></div>
-      </div>
       <div class="track-info">
         <div id="track-title" class="track-title">No track loaded</div>
         <div id="track-artist" class="track-artist">Add songs to get started</div>
       </div>
 
       <div id="inline-lyrics" class="inline-lyrics" aria-live="polite" title="Open lyrics">
-        <div id="inline-prev-line" class="inline-line prev"></div>
-        <div id="inline-active-line" class="inline-line active"></div>
-        <div id="inline-next-line" class="inline-line next"></div>
+        <div class="inline-lyrics-scroll">
+          <div id="inline-klines-wrap" class="karaoke-lines-wrap"></div>
+        </div>
         <div id="inline-no-lyrics" class="inline-no-lyrics">
           <i class="ti ti-microphone-2"></i>
           <span>Lyrics will appear here</span>
@@ -128,6 +125,7 @@
             <span id="list-detail-name" class="list-detail-name">Playlist</span>
             <span id="list-detail-count" class="list-detail-count">0 songs</span>
           </div>
+          <button id="list-play" class="icon-btn" aria-label="Play playlist" title="Play playlist"><i class="ti ti-player-play"></i></button>
           <button id="list-delete" class="icon-btn danger" aria-label="Delete playlist" title="Delete playlist"><i class="ti ti-trash"></i></button>
         </div>
         <div id="list-detail-tracks" class="playlist"></div>
@@ -156,8 +154,6 @@
     </header>
 
     <input type="file" id="lrc-file-input" accept=".lrc,.txt" hidden />
-
-    <div class="karaoke-hint"><i class="ti ti-arrows-maximize"></i> Double tap lyrics for fullscreen</div>
 
     <div id="lyrics-content" class="lyrics-content">
       <div id="lyrics-loading" class="lyrics-state" hidden>
@@ -234,6 +230,10 @@
     <div class="admin-info">
       <span id="admin-count">0 songs</span>
       <span id="admin-size">0 MB used</span>
+    </div>
+    <div id="storage-warning" class="storage-warning" hidden>
+      <i class="ti ti-alert-triangle"></i>
+      <span>El navegador puede borrar tus canciones. <button id="storage-persist-btn" class="inline-link-btn">Activar almacenamiento permanente</button></span>
     </div>
     <div id="admin-list" class="admin-list"></div>
     <div id="empty-state" class="empty-state">
