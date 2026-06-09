@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aurora-player-v50';
+const CACHE_NAME = 'aurora-player-v51';
 const APP_SHELL = [
   './',
   './index.html',
