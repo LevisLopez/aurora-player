@@ -45,6 +45,7 @@ const listsGrid = $('lists-grid');
 const btnNewList = $('btn-new-list');
 const listDetail = $('list-detail');
 const listBack = $('list-back');
+const listPlayBtn = $('list-play');
 const listDeleteBtn = $('list-delete');
 const listDetailName = $('list-detail-name');
 const listDetailCount = $('list-detail-count');
@@ -413,6 +414,18 @@ async function renderListDetailById(id) {
   listEmpty.hidden = tracks.length > 0;
   listDetailTracks.style.display = tracks.length ? '' : 'none';
 
+  // Habilitar/deshabilitar botón de reproducir lista
+  listPlayBtn.disabled = tracks.length === 0;
+  listPlayBtn.title = tracks.length ? `Reproducir ${playlist.name}` : 'Sin canciones';
+  listPlayBtn.onclick = () => {
+    if (!tracks.length) return;
+    const ids = tracks.map(t => t.id);
+    Player.setQueue(ids, false, false);
+    Player.playById(ids[0], ids);
+    showMainScreen('player');
+    showToast(`▶ ${playlist.name}`);
+  };
+
   if (!tracks.length) {
     listDetailTracks.innerHTML = '';
     return;
@@ -424,7 +437,7 @@ async function renderListDetailById(id) {
   bindTrackRows(listDetailTracks, queueIds, {
     onRemove: async (trackId) => {
       await dbRemoveTrackFromPlaylist(activeListId, trackId);
-      showToast('Removed from playlist');
+      showToast('Canción quitada de la lista');
       await renderListDetailById(activeListId);
     },
   });
@@ -701,6 +714,7 @@ function showLyricsScreen() {
   const track = Player.currentTrack();
   if (track) loadLyricsForTrack(track, true);
   else showLyricsState('no-track');
+  pushNavState('lyrics');
 }
 
 function hideLyricsScreen() {
@@ -717,37 +731,48 @@ function showLyricsState(state) {
 }
 
 function resetInlineLyrics() {
-  $('inline-prev-line').textContent = '';
-  $('inline-active-line').textContent = '';
-  $('inline-next-line').textContent = '';
+  const wrap = $('inline-klines-wrap');
+  if (wrap) { wrap.innerHTML = ''; wrap.style.transform = ''; }
   $('inline-no-lyrics').classList.remove('hidden');
 }
 
-function wordSpans(line, activeWordIdx = -1, markActive = false) {
-  if (!line || !line.words || !line.words.length) return escHtml(line?.text || '');
-  return line.words.map((word, index) => {
-    const cls = [
-      'lyric-word',
-      `word-color-${index % 6}`,
-      markActive && index < activeWordIdx ? 'past-word' : '',
-      markActive && index === activeWordIdx ? 'current-word' : '',
-      markActive && index > activeWordIdx ? 'future-word' : '',
-    ].filter(Boolean).join(' ');
-    return `<span class="${cls}" data-word-index="${index}">${escHtml(word.text)}</span>`;
-  }).join(' ');
+function buildInlineKaraokeLines(lines) {
+  const wrap = $('inline-klines-wrap');
+  if (!wrap) return;
+  $('inline-no-lyrics').classList.add('hidden');
+  wrap.innerHTML = lines.map((line, i) =>
+    `<div class="kline" data-idx="${i}">${escHtml(line.text)}</div>`
+  ).join('');
+}
+
+function scrollInlineKaraoke(idx) {
+  const wrap = $('inline-klines-wrap');
+  const container = wrap?.parentElement;
+  if (!wrap || !container || idx < 0) return;
+  const lines = wrap.querySelectorAll('.kline');
+  if (!lines[idx]) return;
+
+  // Actualizar clases
+  lines.forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+    el.classList.toggle('near',   Math.abs(i - idx) === 1);
+    el.classList.remove('near');
+  });
+  // Near = ±1
+  if (lines[idx - 1]) lines[idx - 1].classList.add('near');
+  if (lines[idx + 1]) lines[idx + 1].classList.add('near');
+
+  // Centrar la línea activa con transform
+  const containerH = container.clientHeight;
+  const lineTop    = lines[idx].offsetTop;
+  const lineH      = lines[idx].offsetHeight;
+  const offset     = lineTop - containerH / 2 + lineH / 2;
+  wrap.style.transform = `translateY(${-offset}px)`;
 }
 
 function renderInlineLyrics(idx, wordIdx, lines) {
-  const prevEl = $('inline-prev-line');
-  const activeEl = $('inline-active-line');
-  const nextEl = $('inline-next-line');
-  const noLyrics = $('inline-no-lyrics');
-
   if (idx < 0 || !lines[idx]) return;
-  noLyrics.classList.add('hidden');
-  prevEl.textContent = idx > 0 ? lines[idx - 1].text : '';
-  activeEl.innerHTML = wordSpans(lines[idx], wordIdx, true);
-  nextEl.textContent = idx < lines.length - 1 ? lines[idx + 1].text : '';
+  scrollInlineKaraoke(idx);
 }
 
 function renderLyricsLines() {
@@ -811,7 +836,7 @@ async function loadLyricsForTrack(track, foreground = false) {
   if (token !== lyricsRequestToken || Player.currentId !== track.id) return;
 
   if (result === 'found' || result === 'cached') {
-    $('inline-no-lyrics').classList.add('hidden');
+    buildInlineKaraokeLines(Lyrics.lines);
     if (foreground || lyricsVisible) renderLyricsLines();
     lyricsDeleteBtn.hidden = false;
     const state = Lyrics.sync(Player.currentTime);
@@ -825,6 +850,16 @@ async function loadLyricsForTrack(track, foreground = false) {
 
 function handleLrcUpload() {
   lrcFileInput.click();
+}
+
+let fsControlsTimer = null;
+
+function showFsControls() {
+  document.body.classList.add('fs-controls-visible');
+  clearTimeout(fsControlsTimer);
+  fsControlsTimer = setTimeout(() => {
+    document.body.classList.remove('fs-controls-visible');
+  }, 3000);
 }
 
 async function toggleLyricsFullscreen() {
@@ -847,11 +882,59 @@ function updateFullscreenIcon() {
   const full = document.fullscreenElement === screenLyrics || document.body.classList.contains('lyrics-cinema');
   document.body.classList.toggle('lyrics-fullscreen', full);
   lyricsFullscreenBtn.querySelector('i').className = full ? 'ti ti-minimize' : 'ti ti-maximize';
+  if (!full) {
+    // Al salir de fullscreen, restaurar controles visibles
+    document.body.classList.remove('fs-controls-visible');
+    clearTimeout(fsControlsTimer);
+  }
 }
 
-// ── Event bindings ────────────────────────
-btnOpenAdmin.addEventListener('click', () => showMainScreen('admin'));
+// ── Manejo del botón atrás del celular ───
+function pushNavState(name) {
+  history.pushState({ screen: name }, '', '');
+}
+
+const _showMainScreen = showMainScreen;
+window.showMainScreen = function(name) {
+  _showMainScreen(name);
+  if (name !== 'player') pushNavState(name);
+};
+
+function showLyricsScreen_orig() {
+  lyricsVisible = true;
+  screenLyrics.classList.add('active');
+  btnLyrics.classList.add('lyrics-on');
+  const track = Player.currentTrack();
+  if (track) loadLyricsForTrack(track, true);
+  else showLyricsState('no-track');
+  pushNavState('lyrics');
+}
+
+window.addEventListener('popstate', (e) => {
+  // Cerrar fullscreen primero
+  const isFullscreen = document.body.classList.contains('lyrics-fullscreen') ||
+                       document.body.classList.contains('lyrics-cinema');
+  if (isFullscreen) {
+    if (document.fullscreenElement) document.exitFullscreen();
+    document.body.classList.remove('lyrics-cinema', 'lyrics-fullscreen', 'fs-controls-visible');
+    updateFullscreenIcon();
+    pushNavState('lyrics'); // mantener en lyrics para el siguiente atrás
+    return;
+  }
+  // Cerrar pantalla de lyrics
+  if (lyricsVisible) {
+    hideLyricsScreen();
+    return;
+  }
+  // Cerrar pantalla admin
+  if (screenAdmin.classList.contains('active')) {
+    _showMainScreen('player');
+    return;
+  }
+  // Si ya estamos en player, salir (comportamiento por defecto)
+});
 btnBack.addEventListener('click', () => showMainScreen('player'));
+btnOpenAdmin.addEventListener('click', () => { showMainScreen('admin'); pushNavState('admin'); });
 
 btnPlay.addEventListener('click', () => Player.togglePlay());
 btnPrev.addEventListener('click', () => Player.prev());
@@ -978,7 +1061,21 @@ lyricsDeleteBtn.addEventListener('click', async () => {
 });
 lyricsFullscreenBtn.addEventListener('click', toggleLyricsFullscreen);
 document.addEventListener('fullscreenchange', updateFullscreenIcon);
-lyricsContent.addEventListener('click', () => {
+lyricsContent.addEventListener('click', (e) => {
+  const isFullscreen = document.body.classList.contains('lyrics-fullscreen') ||
+                       document.body.classList.contains('lyrics-cinema');
+  if (isFullscreen) {
+    // Toque simple → mostrar/ocultar controles
+    const visible = document.body.classList.contains('fs-controls-visible');
+    if (visible) {
+      document.body.classList.remove('fs-controls-visible');
+      clearTimeout(fsControlsTimer);
+    } else {
+      showFsControls();
+    }
+    return;
+  }
+  // Doble tap fuera de fullscreen → entrar en fullscreen
   const now = Date.now();
   if (now - lastLyricsTap < 320) toggleLyricsFullscreen();
   lastLyricsTap = now;
@@ -1071,9 +1168,43 @@ Lyrics.onSync = updateLyricsHighlight;
   Player.setupMediaSession();
   await Player.loadLibrary();
   await renderPlaylist();
-  await dbRequestPersistentStorage();
+
+  // Almacenamiento persistente — mostrar aviso si no está garantizado
+  await checkPersistentStorage();
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
   }
 })();
+
+async function checkPersistentStorage() {
+  if (!navigator.storage || !navigator.storage.persisted) return;
+  const storageWarning = $('storage-warning');
+  const persistBtn = $('storage-persist-btn');
+  try {
+    const persisted = await navigator.storage.persisted();
+    if (persisted) {
+      if (storageWarning) storageWarning.hidden = true;
+      return;
+    }
+    // Intentar pedir automáticamente (puede requerir interacción del usuario)
+    const granted = await navigator.storage.persist();
+    if (granted) {
+      if (storageWarning) storageWarning.hidden = true;
+      return;
+    }
+    // No se pudo otorgar automáticamente — mostrar aviso
+    if (storageWarning) storageWarning.hidden = false;
+    if (persistBtn) {
+      persistBtn.addEventListener('click', async () => {
+        const ok = await navigator.storage.persist();
+        if (ok) {
+          storageWarning.hidden = true;
+          showToast('✓ Almacenamiento permanente activado');
+        } else {
+          showToast('El navegador no pudo garantizarlo. Instala la app como PWA para mejor protección.');
+        }
+      });
+    }
+  } catch (_) {}
+}
