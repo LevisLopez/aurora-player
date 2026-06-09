@@ -24,6 +24,7 @@
       <div class="top-actions minimal-actions" aria-label="Player actions">
         <button id="btn-sleep" class="icon-btn" aria-label="Sleep timer" title="Sleep timer"><i class="ti ti-moon-stars"></i></button>
         <button id="btn-theme" class="icon-btn" aria-label="Color themes" title="Color themes"><i class="ti ti-palette"></i></button>
+        <button id="btn-online-search" class="icon-btn subtle-online-btn" aria-label="Online music search" title="Online search"><i class="ti ti-world-search"></i></button>
         <button id="btn-open-admin" class="icon-btn settings-only-btn" aria-label="Open control center" title="Control center"><i class="ti ti-settings"></i></button>
       </div>
     </header>
@@ -206,19 +207,64 @@
     <div class="search-overlay-top">
       <button id="search-back" class="icon-btn" aria-label="Close search"><i class="ti ti-arrow-left"></i></button>
       <div class="search-title-group">
-        <strong>Buscar canciones</strong>
-        <span>Busca en tu biblioteca o agrega archivos del teléfono.</span>
+        <strong>Find Music</strong>
+        <span>Search your library, add phone files, or use online references.</span>
       </div>
     </div>
 
     <div class="search-center-content">
       <div class="search-card local-search-card">
         <div class="search-card-heading">
-          <span>Buscar en biblioteca</span>
-          <button id="btn-search-add-local" class="mini-btn"><i class="ti ti-folder-plus"></i> Agregar MP3</button>
+          <span>Search current library</span>
+          <button id="btn-search-add-local" class="mini-btn"><i class="ti ti-folder-plus"></i> Add from phone</button>
         </div>
-        <input type="text" id="search-input" class="search-input" placeholder="Buscar canciones o artistas..." autocomplete="off" />
+        <input type="text" id="search-input" class="search-input" placeholder="Search saved songs or artists..." autocomplete="off" />
         <div id="search-results" class="search-results"></div>
+      </div>
+
+      <div class="search-card youtube-helper-card" id="youtube-helper-card">
+        <div class="search-card-heading stacked-heading">
+          <span>YouTube helper</span>
+          <small>Search YouTube, preview a pasted link, copy it, then import the downloaded MP3 from your phone.</small>
+        </div>
+        <div class="inline-form-row">
+          <input type="text" id="youtube-query-input" class="modal-input" placeholder="Song or artist on YouTube" />
+          <button id="youtube-search-btn" class="modal-btn primary"><i class="ti ti-brand-youtube"></i> Search</button>
+        </div>
+        <label class="modal-label" for="youtube-link-input">Paste selected YouTube link</label>
+        <input type="url" id="youtube-link-input" class="modal-input" placeholder="https://www.youtube.com/watch?v=..." />
+        <div id="youtube-preview" class="youtube-preview" hidden></div>
+        <div class="youtube-helper-actions">
+          <button id="youtube-copy-link" class="mini-btn"><i class="ti ti-copy"></i> Copy link</button>
+          <button id="youtube-open-y2mate" class="mini-btn"><i class="ti ti-external-link"></i> Open MP3 page</button>
+          <button id="youtube-add-downloaded" class="mini-btn"><i class="ti ti-folder-plus"></i> Add downloaded MP3</button>
+        </div>
+        <p class="helper-note">Use this only with audio you have the right to download. The app cannot paste into external websites automatically.</p>
+      </div>
+
+      <div class="search-card online-search-card">
+        <div class="search-card-heading">
+          <span>Legal preview search</span>
+          <small>Adds short previews when the source allows browser download.</small>
+        </div>
+        <div class="inline-form-row">
+          <input type="text" id="online-search-input" class="modal-input" placeholder="Artist or song name" />
+          <button id="online-search-btn" class="modal-btn primary">Search</button>
+        </div>
+        <div id="online-results" class="online-results"></div>
+      </div>
+
+      <div class="search-card direct-url-card">
+        <div class="search-card-heading">
+          <span>Direct audio URL</span>
+          <small>Use MP3/M4A/OGG/WAV links that allow browser download.</small>
+        </div>
+        <input type="url" id="direct-url-input" class="modal-input" placeholder="https://example.com/song.mp3" />
+        <div class="inline-form-row">
+          <input type="text" id="direct-title-input" class="modal-input" placeholder="Title" />
+          <input type="text" id="direct-artist-input" class="modal-input" placeholder="Artist" />
+        </div>
+        <button id="direct-add-btn" class="modal-btn primary full-width"><i class="ti ti-download"></i> Download and add</button>
       </div>
     </div>
   </section>
