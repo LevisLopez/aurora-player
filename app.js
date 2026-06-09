@@ -622,14 +622,22 @@ async function renderSearchResults() {
 }
 
 // ── Admin library ─────────────────────────
-async function renderAdminList() {
-  const tracks = applySort(Player.tracks);
+async function renderAdminList(filter = '') {
+  const allTracks = applySort(Player.tracks);
   const size = await dbGetTotalSize();
-  adminCount.textContent = formatSongCount(tracks.length);
+  adminCount.textContent = formatSongCount(allTracks.length);
   adminSize.textContent = `${(size / 1024 / 1024).toFixed(1)} MB used`;
-  emptyState.classList.toggle('visible', tracks.length === 0);
+  const tracks = filter
+    ? allTracks.filter(t =>
+        (t.title || '').toLowerCase().includes(filter.toLowerCase()) ||
+        (t.artist || '').toLowerCase().includes(filter.toLowerCase()))
+    : allTracks;
+  emptyState.classList.toggle('visible', allTracks.length === 0);
   adminList.innerHTML = '';
-  if (!tracks.length) return;
+  if (!tracks.length) {
+    if (filter) adminList.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">Sin resultados para "${filter}"</div>`;
+    return;
+  }
 
   adminList.innerHTML = tracks.map(track => {
     const checked = selectedIds.has(Number(track.id));
@@ -1409,7 +1417,7 @@ btnTheme.addEventListener('click', () => { modalTheme.hidden = false; renderThem
 if (btnAdminTheme) btnAdminTheme.addEventListener('click', () => { modalTheme.hidden = false; renderThemeOptions(); });
 themeClose.addEventListener('click', () => { modalTheme.hidden = true; });
 modalTheme.addEventListener('click', (event) => { if (event.target === modalTheme) modalTheme.hidden = true; });
-if (btnNightMode) btnNightMode.addEventListener('click', () => { const on = applyNightMode(); showToast(on ? 'Night mode on' : 'Night mode off'); });
+if (btnNightMode) btnNightMode.addEventListener('click', () => { if (SleepTimer.active) SleepTimer.cancel(); else if (modalSleep) modalSleep.hidden = false; });
 if (btnAdminNight) btnAdminNight.addEventListener('click', () => { const on = applyNightMode(); showToast(on ? 'Night mode on' : 'Night mode off'); });
 
 tabAll.addEventListener('click', () => setActiveTab('all'));
@@ -1649,6 +1657,42 @@ Player.onTrackChange = (track) => {
 };
 
 Lyrics.onSync = updateLyricsHighlight;
+
+// ── Admin search ──────────────────────────
+const adminSearchInput = document.getElementById('admin-search-input');
+const adminSearchClear = document.getElementById('admin-search-clear');
+if (adminSearchInput) {
+  adminSearchInput.addEventListener('input', () => {
+    const q = adminSearchInput.value;
+    if (adminSearchClear) adminSearchClear.hidden = !q;
+    renderAdminList(q);
+  });
+}
+if (adminSearchClear) {
+  adminSearchClear.addEventListener('click', () => {
+    adminSearchInput.value = '';
+    adminSearchClear.hidden = true;
+    renderAdminList('');
+  });
+}
+
+// ── Admin search ──────────────────────────
+const adminSearchInput = document.getElementById("admin-search-input");
+const adminSearchClear = document.getElementById("admin-search-clear");
+if (adminSearchInput) {
+  adminSearchInput.addEventListener("input", function() {
+    var q = adminSearchInput.value;
+    if (adminSearchClear) adminSearchClear.hidden = !q;
+    renderAdminList(q);
+  });
+}
+if (adminSearchClear) {
+  adminSearchClear.addEventListener("click", function() {
+    adminSearchInput.value = "";
+    adminSearchClear.hidden = true;
+    renderAdminList("");
+  });
+}
 
 // ── Init ──────────────────────────────────
 (async function init() {
