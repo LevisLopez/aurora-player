@@ -622,24 +622,14 @@ async function renderSearchResults() {
 }
 
 // ── Admin library ─────────────────────────
-async function renderAdminList(filter = '') {
-  const allTracks = applySort(Player.tracks);
+async function renderAdminList() {
+  const tracks = applySort(Player.tracks);
   const size = await dbGetTotalSize();
-  adminCount.textContent = formatSongCount(allTracks.length);
+  adminCount.textContent = formatSongCount(tracks.length);
   adminSize.textContent = `${(size / 1024 / 1024).toFixed(1)} MB used`;
-
-  const tracks = filter
-    ? allTracks.filter(t =>
-        (t.title || '').toLowerCase().includes(filter.toLowerCase()) ||
-        (t.artist || '').toLowerCase().includes(filter.toLowerCase()))
-    : allTracks;
-
-  emptyState.classList.toggle('visible', allTracks.length === 0);
+  emptyState.classList.toggle('visible', tracks.length === 0);
   adminList.innerHTML = '';
-  if (!tracks.length) {
-    if (filter) adminList.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">Sin resultados para "${escHtml(filter)}"</div>`;
-    return;
-  }
+  if (!tracks.length) return;
 
   adminList.innerHTML = tracks.map(track => {
     const checked = selectedIds.has(Number(track.id));
@@ -1419,10 +1409,7 @@ btnTheme.addEventListener('click', () => { modalTheme.hidden = false; renderThem
 if (btnAdminTheme) btnAdminTheme.addEventListener('click', () => { modalTheme.hidden = false; renderThemeOptions(); });
 themeClose.addEventListener('click', () => { modalTheme.hidden = true; });
 modalTheme.addEventListener('click', (event) => { if (event.target === modalTheme) modalTheme.hidden = true; });
-if (btnNightMode) btnNightMode.addEventListener('click', () => {
-  if (SleepTimer.active) SleepTimer.cancel();
-  else if (modalSleep) modalSleep.hidden = false;
-});
+if (btnNightMode) btnNightMode.addEventListener('click', () => { const on = applyNightMode(); showToast(on ? 'Night mode on' : 'Night mode off'); });
 if (btnAdminNight) btnAdminNight.addEventListener('click', () => { const on = applyNightMode(); showToast(on ? 'Night mode on' : 'Night mode off'); });
 
 tabAll.addEventListener('click', () => setActiveTab('all'));
@@ -1662,24 +1649,6 @@ Player.onTrackChange = (track) => {
 };
 
 Lyrics.onSync = updateLyricsHighlight;
-
-// ── Admin search ──────────────────────────
-const adminSearchInput = $('admin-search-input');
-const adminSearchClear = $('admin-search-clear');
-if (adminSearchInput) {
-  adminSearchInput.addEventListener('input', () => {
-    const q = adminSearchInput.value;
-    if (adminSearchClear) adminSearchClear.hidden = !q;
-    if (screenAdmin.classList.contains('active')) renderAdminList(q);
-  });
-}
-if (adminSearchClear) {
-  adminSearchClear.addEventListener('click', () => {
-    adminSearchInput.value = '';
-    adminSearchClear.hidden = true;
-    renderAdminList('');
-  });
-}
 
 // ── Init ──────────────────────────────────
 (async function init() {
