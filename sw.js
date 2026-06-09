@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aurora-english-learning-v14';
+const CACHE_NAME = 'aurora-english-learning-v15';
 const APP_SHELL = [
   './',
   './index.html',
