@@ -57,10 +57,10 @@ const searchResults = $('search-results');
 const searchBack = $('search-back');
 
 const adminList = $('admin-list');
-const adminCount = $('admin-count');
+const adminCount = null; // merged into dash-total-songs
 const adminSize = $('admin-size');
 const emptyState = $('empty-state');
-const btnSelect = $('btn-select');
+const btnSelect = null; // removed
 const selectBar = $('select-bar');
 const selectCount = $('select-count');
 const selectAllBtn = $('select-all-btn');
@@ -146,10 +146,10 @@ const btnAdminTheme = $('btn-admin-theme');
 const btnAdminNight = $('btn-admin-night');
 const dashTotalSongs = $('dash-total-songs');
 const dashFavorites = $('dash-favorites');
-const dashPlaylists = $('dash-playlists');
+const dashPlaylists = null; // removed
 const dashShowTop = $('dash-show-top');
 const dashTopSongs = $('dash-top-songs');
-const dashTopArtists = $('dash-top-artists');
+const dashTopArtists = null; // removed
 const listAddSongsBtn = $('list-add-songs');
 const modalPickSongs = $('modal-pick-songs');
 const pickSongSearch = $('pick-song-search');
@@ -622,14 +622,21 @@ async function renderSearchResults() {
 }
 
 // ── Admin library ─────────────────────────
-async function renderAdminList() {
-  const tracks = applySort(Player.tracks);
+async function renderAdminList(filter = '') {
+  const allTracks = applySort(Player.tracks);
   const size = await dbGetTotalSize();
-  adminCount.textContent = formatSongCount(tracks.length);
-  adminSize.textContent = `${(size / 1024 / 1024).toFixed(1)} MB used`;
-  emptyState.classList.toggle('visible', tracks.length === 0);
+  if (adminSize) adminSize.textContent = `${(size / 1024 / 1024).toFixed(1)} MB`;
+  const tracks = filter
+    ? allTracks.filter(t =>
+        (t.title || '').toLowerCase().includes(filter.toLowerCase()) ||
+        (t.artist || '').toLowerCase().includes(filter.toLowerCase()))
+    : allTracks;
+  emptyState.classList.toggle('visible', allTracks.length === 0);
   adminList.innerHTML = '';
-  if (!tracks.length) return;
+  if (!tracks.length) {
+    if (filter) adminList.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">Sin resultados para "${escHtml(filter)}"</div>`;
+    return;
+  }
 
   adminList.innerHTML = tracks.map(track => {
     const checked = selectedIds.has(Number(track.id));
@@ -660,44 +667,46 @@ async function renderAdminList() {
   renderDashboard();
 }
 
+// Admin search wiring
+const adminSearchInput = $('admin-search-input');
+const adminSearchClear = $('admin-search-clear');
+if (adminSearchInput) {
+  adminSearchInput.addEventListener('input', () => {
+    const q = adminSearchInput.value;
+    if (adminSearchClear) adminSearchClear.hidden = !q;
+    renderAdminList(q);
+  });
+}
+if (adminSearchClear) {
+  adminSearchClear.addEventListener('click', () => {
+    adminSearchInput.value = '';
+    adminSearchClear.hidden = true;
+    renderAdminList('');
+  });
+}
 
 async function renderDashboard() {
   if (!dashTotalSongs) return;
   const tracks = Player.tracks || [];
   const favorites = tracks.filter(track => track.favorite === true).length;
-  const playlists = await dbGetAllPlaylists();
   dashTotalSongs.textContent = String(tracks.length);
-  dashFavorites.textContent = String(favorites);
-  dashPlaylists.textContent = String(playlists.length);
+  if (dashFavorites) dashFavorites.textContent = String(favorites);
 
+  const topCard = $('dash-top-songs-card');
   const topSongs = [...tracks]
     .filter(track => Number(track.playCount || 0) > 0)
     .sort((a, b) => (b.playCount - a.playCount) || (b.lastPlayedAt - a.lastPlayedAt) || compareAZ(a, b))
     .slice(0, 5);
-  dashTopSongs.innerHTML = topSongs.length ? topSongs.map((track, index) => `
-    <button class="dash-mini-item" data-id="${track.id}">
-      <span>${index + 1}</span>
-      <strong>${escHtml(track.title || 'Unknown')}</strong>
-      <em>${formatPlayCount(track.playCount || 0)}</em>
-    </button>
-  `).join('') : '<div class="dash-empty">No plays counted yet.</div>';
-
-  const artistStats = new Map();
-  tracks.forEach(track => {
-    const name = track.artist || 'Unknown';
-    const plays = Number(track.playCount || 0);
-    const current = artistStats.get(name) || 0;
-    artistStats.set(name, current + plays);
-  });
-  const topArtists = [...artistStats.entries()].filter(([, plays]) => plays > 0).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  dashTopArtists.innerHTML = topArtists.length ? topArtists.map(([artist, plays], index) => `
-    <div class="dash-mini-item static">
-      <span>${index + 1}</span>
-      <strong>${escHtml(artist)}</strong>
-      <em>${formatPlayCount(plays)}</em>
-    </div>
-  `).join('') : '<div class="dash-empty">No artist stats yet.</div>';
-
+  if (dashTopSongs) {
+    dashTopSongs.innerHTML = topSongs.length ? topSongs.map((track, index) => `
+      <button class="dash-mini-item" data-id="${track.id}">
+        <span>${index + 1}</span>
+        <strong>${escHtml(track.title || 'Unknown')}</strong>
+        <em>${formatPlayCount(track.playCount || 0)}</em>
+      </button>
+    `).join('') : '<div class="dash-empty">Aún no hay canciones reproducidas.</div>';
+    if (topCard) topCard.hidden = !dashShowTop?.classList.contains('active');
+  }
   dashTopSongs.querySelectorAll('[data-id]').forEach(btn => btn.addEventListener('click', async () => {
     showMainScreen('player');
     await Player.playById(Number(btn.dataset.id), topSongs.map(track => track.id));
@@ -1430,7 +1439,7 @@ btnExport.addEventListener('click', exportLibrary);
 btnImport.addEventListener('click', () => importFileInput.click());
 importFileInput.addEventListener('change', () => importLibrary(importFileInput.files[0]));
 
-btnSelect.addEventListener('click', () => {
+if (btnSelect) btnSelect.addEventListener('click', () => {
   if (!Player.tracks.length) { showToast('No songs to select'); return; }
   setSelectMode(!selectMode);
 });
@@ -1518,8 +1527,11 @@ if (pickSongClose) pickSongClose.addEventListener('click', () => { modalPickSong
 if (pickSongSearch) pickSongSearch.addEventListener('input', () => renderPickSongList());
 if (modalPickSongs) modalPickSongs.addEventListener('click', (event) => { if (event.target === modalPickSongs) modalPickSongs.hidden = true; });
 if (dashShowTop) dashShowTop.addEventListener('click', () => {
-  setActiveTab('top');
-  showMainScreen('player');
+  const topCard = $('dash-top-songs-card');
+  if (!topCard) return;
+  const showing = !topCard.hidden;
+  topCard.hidden = showing;
+  dashShowTop.classList.toggle('active', !showing);
 });
 listDeleteBtn.addEventListener('click', async () => {
   if (!activeListId) return;
