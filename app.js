@@ -706,11 +706,11 @@ async function renderDashboard() {
       </button>
     `).join('') : '<div class="dash-empty">Aún no hay canciones reproducidas.</div>';
     if (topCard) topCard.hidden = !dashShowTop?.classList.contains('active');
+    dashTopSongs.querySelectorAll('[data-id]').forEach(btn => btn.addEventListener('click', async () => {
+      showMainScreen('player');
+      await Player.playById(Number(btn.dataset.id), topSongs.map(track => track.id));
+    }));
   }
-  dashTopSongs.querySelectorAll('[data-id]').forEach(btn => btn.addEventListener('click', async () => {
-    showMainScreen('player');
-    await Player.playById(Number(btn.dataset.id), topSongs.map(track => track.id));
-  }));
 }
 
 async function openPickSongsModal() {
