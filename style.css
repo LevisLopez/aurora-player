@@ -1756,3 +1756,23 @@ body[data-night="true"]::before { opacity: 0.18; }
   .lyrics-flow .flow-line { font-size: clamp(19px, 6.3vw, 31px); }
 }
 .icon-btn.active { color: var(--accent2); background: rgba(255,255,255,0.085); box-shadow: 0 0 22px var(--glow); }
+
+/* ── Admin search ── */
+.admin-search-section { padding: 0 16px 8px; }
+.admin-search-wrap {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 14px; padding: 0 12px;
+  transition: border-color 0.2s;
+}
+.admin-search-wrap:focus-within { border-color: var(--accent); }
+.admin-search-icon { color: var(--text3); font-size: 16px; flex-shrink: 0; }
+.admin-search-input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--text); font-size: 14px; font-family: var(--font-body); padding: 11px 0;
+}
+.admin-search-input::placeholder { color: var(--text3); }
+.admin-search-clear {
+  background: none; border: none; color: var(--text3);
+  cursor: pointer; font-size: 16px; padding: 4px; display: flex; align-items: center;
+}
