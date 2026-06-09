@@ -224,17 +224,17 @@
   </section>
 
   <!-- CONTROL CENTER / SETTINGS -->
-  <section id="screen-admin" class="screen screen-admin" aria-label="Settings, library and playlists">
+  <section id="screen-admin" class="screen screen-admin" aria-label="Configuración">
     <header class="top-bar admin-top">
       <button id="btn-back" class="icon-btn" aria-label="Back"><i class="ti ti-arrow-left"></i></button>
       <div class="admin-title-block">
-        <span class="eyebrow">Control Center</span>
-        <strong>Dashboard</strong>
+        <span class="eyebrow">Configuración</span>
+        <strong>Biblioteca</strong>
       </div>
       <div class="top-actions compact-admin-actions">
-        <button id="btn-import" class="icon-btn" aria-label="Import backup" title="Import backup"><i class="ti ti-database-import"></i></button>
-        <button id="btn-export" class="icon-btn" aria-label="Export backup" title="Export backup"><i class="ti ti-database-export"></i></button>
-        <button id="btn-select" class="icon-btn" aria-label="Select songs" title="Select songs"><i class="ti ti-checkbox"></i></button>
+        <button id="btn-import" class="icon-btn" aria-label="Import backup" title="Importar respaldo"><i class="ti ti-database-import"></i></button>
+        <button id="btn-export" class="icon-btn" aria-label="Export backup" title="Exportar respaldo"><i class="ti ti-database-export"></i></button>
+        <button id="btn-add-song" class="icon-btn add-btn" aria-label="Add songs" title="Agregar canciones"><i class="ti ti-plus"></i></button>
       </div>
     </header>
 
@@ -242,80 +242,66 @@
     <input type="file" id="file-input" accept="audio/*,.mp3,.mp4,.m4a,.ogg,.oga,.opus,.wav,.flac,.aac,.weba,.webm" multiple hidden />
 
     <section class="control-center-scroll">
-      <section class="dashboard-panel" aria-label="Listening dashboard">
+
+      <!-- Stats -->
+      <section class="dashboard-panel" aria-label="Stats">
         <div class="dashboard-grid">
-          <div class="dash-card"><span>Songs</span><strong id="dash-total-songs">0</strong></div>
-          <div class="dash-card"><span>Favorites</span><strong id="dash-favorites">0</strong></div>
-          <div class="dash-card"><span>Playlists</span><strong id="dash-playlists">0</strong></div>
+          <div class="dash-card"><span>Canciones</span><strong id="dash-total-songs">0</strong></div>
+          <div class="dash-card"><span>Favoritos</span><strong id="dash-favorites">0</strong></div>
+          <div class="dash-card"><span>Storage</span><strong id="admin-size">0 MB</strong></div>
           <button id="dash-show-top" class="dash-card dash-button" type="button"><span>Top 10</span><strong><i class="ti ti-chart-bar"></i></strong></button>
         </div>
         <div class="dashboard-lists">
-          <div class="dashboard-list-card">
-            <h3>Most played songs</h3>
+          <div class="dashboard-list-card" id="dash-top-songs-card" hidden>
+            <h3>Más reproducidas</h3>
             <div id="dash-top-songs" class="dash-mini-list"></div>
-          </div>
-          <div class="dashboard-list-card">
-            <h3>Most played artists</h3>
-            <div id="dash-top-artists" class="dash-mini-list"></div>
           </div>
         </div>
       </section>
 
-      <div class="quick-actions-grid" aria-label="Quick actions">
-        <button id="btn-add-song" class="quick-action-card add-btn" aria-label="Add songs"><i class="ti ti-folder-plus"></i><span>Add local songs</span></button>
-        <button id="btn-admin-theme" class="quick-action-card" aria-label="Theme"><i class="ti ti-palette"></i><span>Themes</span></button>
-        <button id="btn-admin-night" class="quick-action-card" aria-label="Night mode"><i class="ti ti-moon-stars"></i><span>Night mode</span></button>
-        <button id="btn-sleep" class="quick-action-card" aria-label="Sleep timer"><i class="ti ti-clock-moon"></i><span>Sleep timer</span></button>
-        <button id="btn-lyrics" class="quick-action-card" aria-label="Lyrics tools"><i class="ti ti-file-music"></i><span>Lyrics tools</span></button>
-      </div>
-
-      <section class="settings-panel" aria-label="Display options">
+      <!-- Orden -->
+      <section class="settings-panel" aria-label="Opciones">
         <div class="settings-row">
-          <div>
-            <strong>Song order</strong>
-            <span>Choose how All and Favorites are listed.</span>
-          </div>
+          <div><strong>Orden</strong><span>Cómo se listan las canciones.</span></div>
           <div class="sort-wrap">
-            <label class="sr-only" for="sort-select">Sort songs</label>
-            <select id="sort-select" class="sort-select" aria-label="Sort songs">
-              <option value="recent">Recently added</option>
+            <label class="sr-only" for="sort-select">Ordenar</label>
+            <select id="sort-select" class="sort-select" aria-label="Ordenar canciones">
+              <option value="recent">Recientes</option>
               <option value="az">A–Z</option>
             </select>
           </div>
         </div>
-        <div class="settings-row">
-          <div>
-            <strong>Downloaded songs</strong>
-            <span>Everything is saved locally in this device browser.</span>
-          </div>
-          <span id="admin-count" class="pill-stat">0 songs</span>
-        </div>
-        <div class="settings-row">
-          <div>
-            <strong>Storage used</strong>
-            <span>Export a backup before changing phones or browsers.</span>
-          </div>
-          <span id="admin-size" class="pill-stat">0 MB used</span>
+      </section>
+
+      <!-- Buscador -->
+      <section class="admin-search-section">
+        <div class="admin-search-wrap">
+          <i class="ti ti-search admin-search-icon"></i>
+          <input type="text" id="admin-search-input" class="admin-search-input" placeholder="Buscar canciones o artistas..." autocomplete="off" />
+          <button id="admin-search-clear" class="admin-search-clear" hidden aria-label="Limpiar"><i class="ti ti-x"></i></button>
         </div>
       </section>
 
+      <!-- Selección múltiple -->
       <div id="select-bar" class="select-bar" hidden>
-        <span id="select-count" class="select-count">0 selected</span>
+        <span id="select-count" class="select-count">0 seleccionadas</span>
         <div class="select-actions">
-          <button id="select-all-btn" class="mini-btn">All</button>
-          <button id="select-delete-btn" class="mini-btn danger"><i class="ti ti-trash"></i> Delete</button>
-          <button id="select-cancel-btn" class="mini-btn">Cancel</button>
+          <button id="select-all-btn" class="mini-btn">Todas</button>
+          <button id="select-delete-btn" class="mini-btn danger"><i class="ti ti-trash"></i> Borrar</button>
+          <button id="select-cancel-btn" class="mini-btn">Cancelar</button>
         </div>
       </div>
 
-      <section class="admin-management-block" aria-label="Downloaded songs management">
+      <!-- Lista canciones -->
+      <section class="admin-management-block" aria-label="Canciones">
         <div id="admin-list" class="admin-list"></div>
         <div id="empty-state" class="empty-state">
           <i class="ti ti-music-off"></i>
-          <p>No songs yet</p>
-          <span>Use Add local songs or Find music.</span>
+          <p>No hay canciones</p>
+          <span>Toca <i class="ti ti-plus"></i> para agregar tu primer MP3.</span>
         </div>
       </section>
+
     </section>
   </section>
 </main>
