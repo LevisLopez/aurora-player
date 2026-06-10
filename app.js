@@ -629,13 +629,13 @@ async function renderAdminList(filter = '') {
   adminSize.textContent = `${(size / 1024 / 1024).toFixed(1)} MB used`;
   const tracks = filter
     ? allTracks.filter(t =>
-        (t.title || '').toLowerCase().includes(filter.toLowerCase()) ||
-        (t.artist || '').toLowerCase().includes(filter.toLowerCase()))
+        (t.title||'').toLowerCase().includes(filter.toLowerCase()) ||
+        (t.artist||'').toLowerCase().includes(filter.toLowerCase()))
     : allTracks;
   emptyState.classList.toggle('visible', allTracks.length === 0);
   adminList.innerHTML = '';
   if (!tracks.length) {
-    if (filter) adminList.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px;">Sin resultados para "${filter}"</div>`;
+    if (filter) adminList.innerHTML = '<p style="text-align:center;padding:20px;color:var(--text3)">Sin resultados</p>';
     return;
   }
 
@@ -1658,43 +1658,20 @@ Player.onTrackChange = (track) => {
 
 Lyrics.onSync = updateLyricsHighlight;
 
-// ── Admin search ──────────────────────────
-const adminSearchInput = document.getElementById('admin-search-input');
-const adminSearchClear = document.getElementById('admin-search-clear');
-if (adminSearchInput) {
-  adminSearchInput.addEventListener('input', () => {
-    const q = adminSearchInput.value;
-    if (adminSearchClear) adminSearchClear.hidden = !q;
-    renderAdminList(q);
-  });
-}
-if (adminSearchClear) {
-  adminSearchClear.addEventListener('click', () => {
-    adminSearchInput.value = '';
-    adminSearchClear.hidden = true;
-    renderAdminList('');
-  });
-}
-
-// ── Admin search ──────────────────────────
-const adminSearchInput = document.getElementById("admin-search-input");
-const adminSearchClear = document.getElementById("admin-search-clear");
-if (adminSearchInput) {
-  adminSearchInput.addEventListener("input", function() {
-    var q = adminSearchInput.value;
-    if (adminSearchClear) adminSearchClear.hidden = !q;
-    renderAdminList(q);
-  });
-}
-if (adminSearchClear) {
-  adminSearchClear.addEventListener("click", function() {
-    adminSearchInput.value = "";
-    adminSearchClear.hidden = true;
-    renderAdminList("");
-  });
-}
-
 // ── Init ──────────────────────────────────
+// Admin search
+(function() {
+  var inp = document.getElementById('admin-search-input');
+  var clr = document.getElementById('admin-search-clear');
+  if (inp) inp.addEventListener('input', function() {
+    if (clr) clr.hidden = !inp.value;
+    renderAdminList(inp.value);
+  });
+  if (clr) clr.addEventListener('click', function() {
+    inp.value = ''; clr.hidden = true; renderAdminList('');
+  });
+})();
+
 (async function init() {
   applyTheme(localStorage.getItem(LS_THEME) || 'midnight');
   applyNightMode(localStorage.getItem(LS_NIGHT) === 'true');
