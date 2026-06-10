@@ -24,7 +24,6 @@
       <div class="top-actions minimal-actions" aria-label="Player actions">
         <button id="btn-night-mode" class="icon-btn" aria-label="Sleep timer" title="Sleep timer"><i class="ti ti-moon-stars"></i></button>
         <button id="btn-theme" class="icon-btn" aria-label="Color themes" title="Color themes"><i class="ti ti-palette"></i></button>
-        <button id="btn-online-search" class="icon-btn subtle-online-btn" aria-label="Online music search" title="Online search"><i class="ti ti-world-search"></i></button>
         <button id="btn-open-admin" class="icon-btn settings-only-btn" aria-label="Open control center" title="Control center"><i class="ti ti-settings"></i></button>
       </div>
     </header>
@@ -221,44 +220,6 @@
         <input type="text" id="search-input" class="search-input" placeholder="Search saved songs or artists..." autocomplete="off" />
         <div id="search-results" class="search-results"></div>
       </div>
-
-      <div class="search-card youtube-helper-card" id="youtube-helper-card">
-        <div class="search-card-heading stacked-heading">
-          <span>YouTube helper</span>
-          <small>Search YouTube, preview a pasted link, copy it, then import the downloaded MP3 from your phone.</small>
-        </div>
-        <div class="inline-form-row">
-          <input type="text" id="youtube-query-input" class="modal-input" placeholder="Song or artist on YouTube" />
-          <button id="youtube-search-btn" class="modal-btn primary"><i class="ti ti-brand-youtube"></i> Search</button>
-        </div>
-        <label class="modal-label" for="youtube-link-input">Paste selected YouTube link</label>
-        <input type="url" id="youtube-link-input" class="modal-input" placeholder="https://www.youtube.com/watch?v=..." />
-        <div id="youtube-preview" class="youtube-preview" hidden></div>
-        <div class="youtube-helper-actions">
-          <button id="youtube-copy-link" class="mini-btn"><i class="ti ti-copy"></i> Copy link</button>
-          <button id="youtube-open-y2mate" class="mini-btn"><i class="ti ti-external-link"></i> Open MP3 page</button>
-          <button id="youtube-add-downloaded" class="mini-btn"><i class="ti ti-folder-plus"></i> Add downloaded MP3</button>
-        </div>
-        <p class="helper-note">Use this only with audio you have the right to download. The app cannot paste into external websites automatically.</p>
-      </div>
-
-      <div class="search-card online-search-card">
-        <div class="search-card-heading">
-          <span>Legal preview search</span>
-          <small>Adds short previews when the source allows browser download.</small>
-        </div>
-        <div class="inline-form-row">
-          <input type="text" id="online-search-input" class="modal-input" placeholder="Artist or song name" />
-          <button id="online-search-btn" class="modal-btn primary">Search</button>
-        </div>
-        <div id="online-results" class="online-results"></div>
-      </div>
-
-      <div class="search-card direct-url-card">
-        <div class="search-card-heading">
-          <span>Direct audio URL</span>
-          <small>Use MP3/M4A/OGG/WAV links that allow browser download.</small>
-        </div>
         <input type="url" id="direct-url-input" class="modal-input" placeholder="https://example.com/song.mp3" />
         <div class="inline-form-row">
           <input type="text" id="direct-title-input" class="modal-input" placeholder="Title" />
@@ -281,7 +242,7 @@
         <button id="btn-import" class="icon-btn" aria-label="Import backup" title="Import backup"><i class="ti ti-database-import"></i></button>
         <button id="btn-export" class="icon-btn" aria-label="Export backup" title="Export backup"><i class="ti ti-database-export"></i></button>
         <button id="btn-select" class="icon-btn" aria-label="Select songs" title="Select songs"><i class="ti ti-checkbox"></i></button>
-        <label id="btn-add-song-header" class="icon-btn add-btn" title="Add songs" style="cursor:pointer" for="file-input"><i class="ti ti-plus"></i></label>
+        <label class="icon-btn add-btn" for="file-input" title="Agregar canciones" style="cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="ti ti-plus"></i></label>
       </div>
     </header>
 
@@ -293,7 +254,7 @@
         <div class="dashboard-grid">
           <div class="dash-card"><span>Songs</span><strong id="dash-total-songs">0</strong></div>
           <div class="dash-card"><span>Favorites</span><strong id="dash-favorites">0</strong></div>
-          <div class="dash-card" style="display:none"><span>Playlists</span><strong id="dash-playlists">0</strong></div>
+          <div class="dash-card" hidden><span>Playlists</span><strong id="dash-playlists">0</strong></div>
           <button id="dash-show-top" class="dash-card dash-button" type="button"><span>Top 10</span><strong><i class="ti ti-chart-bar"></i></strong></button>
         </div>
         <div class="dashboard-lists">
@@ -301,20 +262,20 @@
             <h3>Most played songs</h3>
             <div id="dash-top-songs" class="dash-mini-list"></div>
           </div>
-          <div class="dashboard-list-card" style="display:none">
+          <div class="dashboard-list-card" hidden>
             <h3>Most played artists</h3>
             <div id="dash-top-artists" class="dash-mini-list"></div>
           </div>
         </div>
       </section>
 
-      <div class="quick-actions-grid" aria-label="Quick actions" style="display:none">
+      <div class="quick-actions-grid" aria-label="Quick actions" hidden>
         <button id="btn-add-song" class="quick-action-card add-btn" aria-label="Add songs"><i class="ti ti-folder-plus"></i><span>Add local songs</span></button>
-        <button id="btn-search" class="quick-action-card" aria-label="Find music" style="display:none"><i class="ti ti-world-search"></i><span>Find music</span></button>
-        <button id="btn-admin-theme" class="quick-action-card" aria-label="Theme" style="display:none"><i class="ti ti-palette"></i><span>Themes</span></button>
-        <button id="btn-admin-night" class="quick-action-card" aria-label="Night mode" style="display:none"><i class="ti ti-moon-stars"></i><span>Night mode</span></button>
-        <button id="btn-sleep" class="quick-action-card" aria-label="Sleep timer" style="display:none"><i class="ti ti-clock-moon"></i><span>Sleep timer</span></button>
-        <button id="btn-lyrics" class="quick-action-card" aria-label="Lyrics tools" style="display:none"><i class="ti ti-file-music"></i><span>Lyrics tools</span></button>
+        <button id="btn-search" class="quick-action-card" aria-label="Find music"><i class="ti ti-world-search"></i><span>Find music</span></button>
+        <button id="btn-admin-theme" class="quick-action-card" aria-label="Theme"><i class="ti ti-palette"></i><span>Themes</span></button>
+        <button id="btn-admin-night" class="quick-action-card" aria-label="Night mode"><i class="ti ti-moon-stars"></i><span>Night mode</span></button>
+        <button id="btn-sleep" class="quick-action-card" aria-label="Sleep timer"><i class="ti ti-clock-moon"></i><span>Sleep timer</span></button>
+        <button id="btn-lyrics" class="quick-action-card" aria-label="Lyrics tools"><i class="ti ti-file-music"></i><span>Lyrics tools</span></button>
       </div>
 
       <section class="settings-panel" aria-label="Display options">
@@ -331,7 +292,7 @@
             </select>
           </div>
         </div>
-        <div class="settings-row" style="display:none">
+        <div class="settings-row" hidden>
           <div>
             <strong>Downloaded songs</strong>
             <span>Everything is saved locally in this device browser.</span>
@@ -356,14 +317,11 @@
         </div>
       </div>
 
-      <section class="admin-search-section">
-        <div class="admin-search-wrap">
-          <i class="ti ti-search admin-search-icon"></i>
-          <input type="text" id="admin-search-input" class="admin-search-input" placeholder="Buscar canciones o artistas..." autocomplete="off" />
-          <button id="admin-search-clear" class="admin-search-clear" hidden aria-label="Limpiar"><i class="ti ti-x"></i></button>
-        </div>
-      </section>
-
+      <div class="admin-search-wrap" style="display:flex;align-items:center;gap:8px;margin:0 16px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:0 12px;">
+        <i class="ti ti-search" style="color:var(--text3);font-size:16px;flex-shrink:0;"></i>
+        <input type="text" id="admin-search-input" style="flex:1;background:none;border:none;outline:none;color:var(--text);font-size:14px;padding:11px 0;" placeholder="Buscar canciones o artistas..." autocomplete="off" />
+        <button id="admin-search-clear" hidden style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:4px;display:flex;align-items:center;"><i class="ti ti-x"></i></button>
+      </div>
       <section class="admin-management-block" aria-label="Downloaded songs management">
         <div id="admin-list" class="admin-list"></div>
         <div id="empty-state" class="empty-state">
