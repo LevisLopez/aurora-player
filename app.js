@@ -1668,6 +1668,11 @@ Lyrics.onSync = updateLyricsHighlight;
   if (adminInline) adminInline.addEventListener('click', function() {
     if (typeof showMainScreen === 'function') showMainScreen('admin');
   });
+  var playlistsAdmin = document.getElementById('btn-playlists-admin');
+  if (playlistsAdmin) playlistsAdmin.addEventListener('click', function() {
+    if (typeof showMainScreen === 'function') showMainScreen('player');
+    if (typeof setActiveTab === 'function') setActiveTab('lists');
+  });
 })();
 
 (async function init() {
