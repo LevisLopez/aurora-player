@@ -622,16 +622,22 @@ async function renderSearchResults() {
 }
 
 // ── Admin library ─────────────────────────
-async function renderAdminList() {
-  const tracks = applySort(Player.tracks);
+async function renderAdminList(filter = '') {
+  const allTracks = applySort(Player.tracks);
   const size = await dbGetTotalSize();
-  adminCount.textContent = formatSongCount(tracks.length);
+  adminCount.textContent = formatSongCount(allTracks.length);
   adminSize.textContent = `${(size / 1024 / 1024).toFixed(1)} MB used`;
-  var sizeDash = document.getElementById('admin-size-dash');
-  if (sizeDash) sizeDash.textContent = `${(size / 1024 / 1024).toFixed(1)} MB`;
-  emptyState.classList.toggle('visible', tracks.length === 0);
+  const tracks = filter
+    ? allTracks.filter(t =>
+        (t.title||'').toLowerCase().includes(filter.toLowerCase()) ||
+        (t.artist||'').toLowerCase().includes(filter.toLowerCase()))
+    : allTracks;
+  emptyState.classList.toggle('visible', allTracks.length === 0);
   adminList.innerHTML = '';
-  if (!tracks.length) return;
+  if (!tracks.length) {
+    if (filter) adminList.innerHTML = '<p style="text-align:center;padding:20px;color:var(--text3)">Sin resultados</p>';
+    return;
+  }
 
   adminList.innerHTML = tracks.map(track => {
     const checked = selectedIds.has(Number(track.id));
@@ -1411,7 +1417,7 @@ btnTheme.addEventListener('click', () => { modalTheme.hidden = false; renderThem
 if (btnAdminTheme) btnAdminTheme.addEventListener('click', () => { modalTheme.hidden = false; renderThemeOptions(); });
 themeClose.addEventListener('click', () => { modalTheme.hidden = true; });
 modalTheme.addEventListener('click', (event) => { if (event.target === modalTheme) modalTheme.hidden = true; });
-if (btnNightMode) btnNightMode.addEventListener('click', () => { const on = applyNightMode(); showToast(on ? 'Night mode on' : 'Night mode off'); });
+if (btnNightMode) btnNightMode.addEventListener('click', () => { if (SleepTimer.active) SleepTimer.cancel(); else if (modalSleep) modalSleep.hidden = false; });
 if (btnAdminNight) btnAdminNight.addEventListener('click', () => { const on = applyNightMode(); showToast(on ? 'Night mode on' : 'Night mode off'); });
 
 tabAll.addEventListener('click', () => setActiveTab('all'));
@@ -1653,14 +1659,17 @@ Player.onTrackChange = (track) => {
 Lyrics.onSync = updateLyricsHighlight;
 
 // ── Init ──────────────────────────────────
-// Botones inline en barra de tabs
+// Admin search
 (function() {
-  var themeInline = document.getElementById('btn-theme-inline');
-  var adminInline = document.getElementById('btn-open-admin-inline');
-  if (themeInline) themeInline.addEventListener('click', function() {
-    if (typeof modalTheme !== 'undefined' && modalTheme) modalTheme.hidden = false;
+  var inp = document.getElementById('admin-search-input');
+  var clr = document.getElementById('admin-search-clear');
+  if (inp) inp.addEventListener('input', function() {
+    if (clr) clr.hidden = !inp.value;
+    renderAdminList(inp.value);
   });
-
+  if (clr) clr.addEventListener('click', function() {
+    inp.value = ''; clr.hidden = true; renderAdminList('');
+  });
 })();
 
 (async function init() {
