@@ -21,10 +21,11 @@
   <section id="screen-player" class="screen screen-player active learning-screen" aria-label="Learning player screen">
     <header class="top-bar learning-topbar minimal-topbar">
       <div class="silent-brand" aria-hidden="true"></div>
-      <!-- IDs ocultos para que JS no crashee -->
-      <span id="btn-night-mode" hidden></span>
-      <span id="btn-theme" hidden></span>
-      <span id="btn-open-admin" hidden></span>
+      <div class="top-actions minimal-actions" aria-label="Player actions">
+        <button id="btn-night-mode" class="icon-btn" aria-label="Sleep timer" title="Sleep timer"><i class="ti ti-moon-stars"></i></button>
+        <button id="btn-theme" class="icon-btn" aria-label="Color themes" title="Color themes"><i class="ti ti-palette"></i></button>
+        <button id="btn-open-admin" class="icon-btn settings-only-btn" aria-label="Open control center" title="Control center"><i class="ti ti-settings"></i></button>
+      </div>
     </header>
 
     <div id="sleep-badge" class="sleep-badge" hidden>
@@ -79,10 +80,9 @@
         <div class="playlist-tabs" role="tablist" aria-label="Library tabs">
           <button id="tab-all" class="tab-btn active" role="tab">All</button>
           <button id="tab-fav" class="tab-btn" role="tab"><i class="ti ti-heart"></i> Favorites</button>
-          <button id="tab-lists" class="tab-btn" role="tab"><i class="ti ti-list"></i></button>
+          <button id="tab-lists" class="tab-btn" role="tab"><i class="ti ti-list"></i> Playlists</button>
           <button id="tab-top" class="tab-btn hidden-main-tab" role="tab">Top 10</button>
         </div>
-        <button id="btn-theme-inline" class="icon-btn" aria-label="Color themes" title="Themes"><i class="ti ti-palette"></i></button>
         <button id="btn-list-search" class="icon-btn list-search-btn" aria-label="Search current list" title="Search list"><i class="ti ti-search"></i></button>
       </div>
       <div class="section-summary compact-summary">
@@ -235,8 +235,8 @@
     <header class="top-bar admin-top">
       <button id="btn-back" class="icon-btn" aria-label="Back"><i class="ti ti-arrow-left"></i></button>
       <div class="admin-title-block">
-        <span class="eyebrow">Aurora</span>
-        <strong>Configuración</strong>
+        <span class="eyebrow">Control Center</span>
+        <strong>Dashboard</strong>
       </div>
       <div class="top-actions compact-admin-actions">
         <button id="btn-import" class="icon-btn" aria-label="Import backup" title="Import backup"><i class="ti ti-database-import"></i></button>
@@ -254,7 +254,6 @@
         <div class="dashboard-grid">
           <div class="dash-card"><span>Songs</span><strong id="dash-total-songs">0</strong></div>
           <div class="dash-card"><span>Favorites</span><strong id="dash-favorites">0</strong></div>
-          <div class="dash-card"><span>Storage</span><strong id="admin-size-dash">— MB</strong></div>
           <div class="dash-card" hidden><span>Playlists</span><strong id="dash-playlists">0</strong></div>
           <button id="dash-show-top" class="dash-card dash-button" type="button"><span>Top 10</span><strong><i class="ti ti-chart-bar"></i></strong></button>
         </div>
@@ -300,7 +299,7 @@
           </div>
           <span id="admin-count" class="pill-stat">0 songs</span>
         </div>
-        <div class="settings-row" hidden>
+        <div class="settings-row">
           <div>
             <strong>Storage used</strong>
             <span>Export a backup before changing phones or browsers.</span>
