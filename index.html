@@ -21,9 +21,7 @@
   <section id="screen-player" class="screen screen-player active learning-screen" aria-label="Learning player screen">
     <header class="top-bar learning-topbar minimal-topbar">
       <div class="silent-brand" aria-hidden="true"></div>
-      <div class="top-actions minimal-actions">
-        <button id="btn-open-admin" class="icon-btn" aria-label="Settings" title="Settings"><i class="ti ti-settings"></i></button>
-      </div>
+      <span id="btn-open-admin" hidden></span>
       <span id="btn-night-mode" hidden></span>
       <span id="btn-theme" hidden></span>
     </header>
@@ -82,6 +80,8 @@
           <button id="tab-fav" class="tab-btn" role="tab"><i class="ti ti-heart"></i> Favorites</button>
           <button id="tab-top" class="tab-btn hidden-main-tab" role="tab">Top 10</button>
         </div>
+        <button id="btn-sleep-inline" class="icon-btn" aria-label="Sleep timer" title="Sleep timer"><i class="ti ti-moon-stars"></i></button>
+        <button id="btn-admin-inline" class="icon-btn" aria-label="Settings" title="Settings"><i class="ti ti-settings"></i></button>
         <button id="btn-theme-inline" class="icon-btn" aria-label="Color themes" title="Themes"><i class="ti ti-palette"></i></button>
         <button id="btn-list-search" class="icon-btn list-search-btn" aria-label="Search current list" title="Search list"><i class="ti ti-search"></i></button>
       </div>
@@ -235,7 +235,7 @@
     <header class="top-bar admin-top">
       <button id="btn-back" class="icon-btn" aria-label="Back"><i class="ti ti-arrow-left"></i></button>
       <div class="admin-title-block">
-        <strong>Configuración</strong>
+        <strong>Settings</strong>
       </div>
       <div class="top-actions compact-admin-actions">
         <button id="btn-import" class="icon-btn" aria-label="Import backup" title="Import backup"><i class="ti ti-database-import"></i></button>
