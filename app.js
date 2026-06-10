@@ -1660,9 +1660,7 @@ Lyrics.onSync = updateLyricsHighlight;
   if (themeInline) themeInline.addEventListener('click', function() {
     if (typeof modalTheme !== 'undefined' && modalTheme) modalTheme.hidden = false;
   });
-  if (adminInline) adminInline.addEventListener('click', function() {
-    if (typeof showMainScreen === 'function') showMainScreen('admin');
-  });
+
 })();
 
 (async function init() {
