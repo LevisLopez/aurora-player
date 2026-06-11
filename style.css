@@ -1776,3 +1776,39 @@ body[data-night="true"]::before { opacity: 0.18; }
   background: none; border: none; color: var(--text3);
   cursor: pointer; font-size: 16px; padding: 4px; display: flex; align-items: center;
 }
+
+/* ── Playlists modal (from Settings) ── */
+.modal-overlay.full-modal {
+  align-items: flex-end;
+}
+.modal-box.modal-box-full {
+  width: 100%;
+  max-width: 520px;
+  height: 80vh;
+  max-height: 720px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px 24px 0 0;
+  margin: 0 auto;
+  padding: 16px;
+}
+.modal-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+.modal-title-row strong { font-size: 17px; }
+.playlists-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+}
+.playlists-modal-body .lists-panel,
+.playlists-modal-body .list-detail {
+  hidden: unset;
+}
