@@ -382,7 +382,7 @@ function setActiveTab(tab) {
 function updateTabs() {
   tabAll.classList.toggle('active', activeTab === 'all');
   tabFav.classList.toggle('active', activeTab === 'favorites');
-  tabLists.classList.toggle('active', activeTab === 'lists');
+  if (tabLists) tabLists.classList.toggle('active', activeTab === 'lists');
   tabTop.classList.toggle('active', activeTab === 'top');
   sortSelect.disabled = activeTab === 'top';
   sortSelect.value = sortMode;
@@ -1416,7 +1416,7 @@ if (btnAdminNight) btnAdminNight.addEventListener('click', () => { const on = ap
 
 tabAll.addEventListener('click', () => setActiveTab('all'));
 tabFav.addEventListener('click', () => setActiveTab('favorites'));
-tabLists.addEventListener('click', () => setActiveTab('lists'));
+if (tabLists) tabLists.addEventListener('click', () => setActiveTab('lists'));
 tabTop.addEventListener('click', () => setActiveTab('top'));
 sortSelect.addEventListener('change', () => {
   sortMode = sortSelect.value;
@@ -1670,8 +1670,11 @@ Lyrics.onSync = updateLyricsHighlight;
   });
   var playlistsAdmin = document.getElementById('btn-playlists-admin');
   if (playlistsAdmin) playlistsAdmin.addEventListener('click', function() {
-    if (typeof showMainScreen === 'function') showMainScreen('player');
-    if (typeof setActiveTab === 'function') setActiveTab('lists');
+    showMainScreen('player');
+    setTimeout(function() {
+      setActiveTab('lists');
+      updateTabs();
+    }, 80);
   });
 })();
 
