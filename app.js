@@ -1684,6 +1684,83 @@ Lyrics.onSync = updateLyricsHighlight;
   if (adminInline) adminInline.addEventListener('click', function() {
     if (typeof showMainScreen === 'function') showMainScreen('admin');
   });
+
+  // Botones del panel deslizable (swipe) en track-info
+  var sleepSwipe = document.getElementById('btn-sleep-swipe');
+  var themeSwipe = document.getElementById('btn-theme-swipe');
+  var adminSwipe = document.getElementById('btn-admin-swipe');
+  if (sleepSwipe) sleepSwipe.addEventListener('click', function() {
+    if (typeof SleepTimer !== 'undefined' && SleepTimer.active) SleepTimer.cancel();
+    else if (typeof modalSleep !== 'undefined' && modalSleep) modalSleep.hidden = false;
+  });
+  if (themeSwipe) themeSwipe.addEventListener('click', function() {
+    if (typeof modalTheme !== 'undefined' && modalTheme) modalTheme.hidden = false;
+  });
+  if (adminSwipe) adminSwipe.addEventListener('click', function() {
+    if (typeof showMainScreen === 'function') showMainScreen('admin');
+  });
+
+  // Swipe horizontal en track-info para revelar el panel oculto
+  var trackSwipe = document.getElementById('track-info-swipe');
+  if (trackSwipe) {
+    var swipeStartX = 0, swipeStartY = 0, swiping = false;
+    trackSwipe.addEventListener('pointerdown', function(e) {
+      swipeStartX = e.clientX;
+      swipeStartY = e.clientY;
+      swiping = true;
+    });
+    trackSwipe.addEventListener('pointerup', function(e) {
+      if (!swiping) return;
+      swiping = false;
+      var dx = e.clientX - swipeStartX;
+      var dy = e.clientY - swipeStartY;
+      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+      if (dx < 0) trackSwipe.classList.add('panel-open');
+      else trackSwipe.classList.remove('panel-open');
+    });
+    trackSwipe.addEventListener('pointercancel', function() { swiping = false; });
+  }
+
+  // Resize handle: arrastrar para ajustar altura de letras vs lista
+  var resizeHandle = document.getElementById('resize-handle');
+  var learningCard = document.querySelector('.learning-card');
+  var playlistSection = document.querySelector('.playlist-section');
+  if (resizeHandle && learningCard && playlistSection) {
+    var dragStartY = 0;
+    var startCardFlex = 0;
+    var screenPlayerEl = document.getElementById('screen-player');
+
+    resizeHandle.addEventListener('pointerdown', function(e) {
+      dragStartY = e.clientY;
+      startCardFlex = learningCard.getBoundingClientRect().height;
+      resizeHandle.classList.add('dragging');
+      resizeHandle.setPointerCapture(e.pointerId);
+      learningCard.style.transition = 'none';
+    });
+    resizeHandle.addEventListener('pointermove', function(e) {
+      if (e.buttons !== 1) return;
+      var dy = e.clientY - dragStartY;
+      var totalH = screenPlayerEl.getBoundingClientRect().height;
+      var newH = startCardFlex + dy;
+      var minH = totalH * 0.28;
+      var maxH = totalH * 0.85;
+      newH = Math.min(Math.max(newH, minH), maxH);
+      learningCard.style.flex = '0 0 ' + newH + 'px';
+
+      // Si arrastra muy cerca del tope, abrir fullscreen de letras
+      if (newH >= maxH - 4 && typeof enterCleanFullscreen === 'function') {
+        resizeHandle.releasePointerCapture(e.pointerId);
+        learningCard.style.flex = '';
+        learningCard.style.transition = '';
+        resizeHandle.classList.remove('dragging');
+        enterCleanFullscreen();
+      }
+    });
+    resizeHandle.addEventListener('pointerup', function() {
+      resizeHandle.classList.remove('dragging');
+      learningCard.style.transition = '';
+    });
+  }
   var playlistsAdmin = document.getElementById('btn-playlists-admin');
   var modalPlaylists = document.getElementById('modal-playlists');
   var playlistsModalBody = document.getElementById('playlists-modal-body');
