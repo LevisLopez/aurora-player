@@ -1529,6 +1529,16 @@ if (dashShowTop) dashShowTop.addEventListener('click', () => {
   setActiveTab('top');
   showMainScreen('player');
 });
+const dashShowSongs = document.getElementById('dash-show-songs');
+const dashShowFavorites = document.getElementById('dash-show-favorites');
+if (dashShowSongs) dashShowSongs.addEventListener('click', () => {
+  setActiveTab('all');
+  showMainScreen('player');
+});
+if (dashShowFavorites) dashShowFavorites.addEventListener('click', () => {
+  setActiveTab('favorites');
+  showMainScreen('player');
+});
 listDeleteBtn.addEventListener('click', async () => {
   if (!activeListId) return;
   if (!confirm('Delete this playlist? Songs will stay in your library.')) return;
