@@ -127,7 +127,18 @@
     </section>
   </section>
 
-  <!-- TRUE CLEAN FULLSCREEN LYRICS -->
+  <!-- PLAYLISTS MODAL (accessible from Settings) -->
+<div id="modal-playlists" class="modal-overlay full-modal" hidden>
+  <div class="modal-box modal-box-full">
+    <div class="modal-title-row">
+      <strong>Playlists</strong>
+      <button id="playlists-modal-close" class="icon-btn" aria-label="Close"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="playlists-modal-body" class="playlists-modal-body"></div>
+  </div>
+</div>
+
+<!-- TRUE CLEAN FULLSCREEN LYRICS -->
   <section id="clean-fullscreen" class="clean-fullscreen" hidden aria-label="Full screen lyrics">
     <div id="fullscreen-lyrics-flow" class="fullscreen-lyrics-flow" aria-live="polite"></div>
     <div id="fullscreen-empty" class="fullscreen-empty" hidden>Play a song with synced lyrics.</div>
@@ -323,7 +334,7 @@
 
       <div class="admin-search-wrap" style="display:flex;align-items:center;gap:8px;margin:0 16px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:0 12px;">
         <i class="ti ti-search" style="color:var(--text3);font-size:16px;flex-shrink:0;"></i>
-        <input type="text" id="admin-search-input" style="flex:1;background:none;border:none;outline:none;color:var(--text);font-size:14px;padding:11px 0;" placeholder="Buscar canciones o artistas..." autocomplete="off" />
+        <input type="text" id="admin-search-input" style="flex:1;background:none;border:none;outline:none;color:var(--text);font-size:14px;padding:11px 0;" placeholder="Search songs or artists..." autocomplete="off" />
         <button id="admin-search-clear" hidden style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:4px;display:flex;align-items:center;"><i class="ti ti-x"></i></button>
       </div>
       <section class="admin-management-block" aria-label="Downloaded songs management">
