@@ -251,7 +251,6 @@
       <div class="top-actions compact-admin-actions">
         <button id="btn-import" class="icon-btn" aria-label="Import backup" title="Import backup"><i class="ti ti-database-import"></i></button>
         <button id="btn-export" class="icon-btn" aria-label="Export backup" title="Export backup"><i class="ti ti-database-export"></i></button>
-        <button id="btn-select" class="icon-btn" aria-label="Select songs" title="Select songs"><i class="ti ti-checkbox"></i></button>
         <label class="icon-btn add-btn" for="file-input" title="Agregar canciones" style="cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="ti ti-plus"></i></label>
       </div>
     </header>
@@ -262,8 +261,8 @@
     <section class="control-center-scroll">
       <section class="dashboard-panel" aria-label="Listening dashboard">
         <div class="dashboard-grid">
-          <div class="dash-card"><span>Songs</span><strong id="dash-total-songs">0</strong></div>
-          <div class="dash-card"><span>Favorites</span><strong id="dash-favorites">0</strong></div>
+          <button id="dash-show-songs" class="dash-card dash-button" type="button"><span>Songs</span><strong id="dash-total-songs">0</strong></button>
+          <button id="dash-show-favorites" class="dash-card dash-button" type="button"><span>Favorites</span><strong id="dash-favorites">0</strong></button>
           <div class="dash-card"><span>Storage</span><strong id="admin-size-dash">— MB</strong></div>
           <div class="dash-card" hidden><span>Playlists</span><strong id="dash-playlists">0</strong></div>
           <button id="dash-show-top" class="dash-card dash-button" type="button"><span>Top 10</span><strong><i class="ti ti-chart-bar"></i></strong></button>
@@ -338,6 +337,10 @@
         <button id="admin-search-clear" hidden style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:4px;display:flex;align-items:center;"><i class="ti ti-x"></i></button>
       </div>
       <section class="admin-management-block" aria-label="Downloaded songs management">
+        <div class="admin-list-toolbar" style="display:flex;align-items:center;justify-content:space-between;padding:0 16px 8px;">
+          <span style="font-size:12px;color:var(--text3);font-weight:600;letter-spacing:0.04em;">SONGS</span>
+          <button id="btn-select" class="icon-btn" aria-label="Select songs" title="Select songs"><i class="ti ti-checkbox"></i></button>
+        </div>
         <div id="admin-list" class="admin-list"></div>
         <div id="empty-state" class="empty-state">
           <i class="ti ti-music-off"></i>
