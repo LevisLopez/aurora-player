@@ -258,6 +258,12 @@ function isModalOpen(el) {
 
 function closeTopLayer() {
   if (cleanFullscreen && cleanFullscreen.hidden === false) { exitCleanFullscreen(); return true; }
+  const modalPlaylistsEl = document.getElementById('modal-playlists');
+  if (modalPlaylistsEl && modalPlaylistsEl.hidden === false) {
+    if (activeListId) { activeListId = null; renderListsPanel(); return true; }
+    if (typeof window.closePlaylistsModal === 'function') window.closePlaylistsModal();
+    return true;
+  }
   const modals = [modalTrackMenu, modalRename, modalNewList, modalAddToList, modalPickSongs, modalTheme, modalSleep];
   const openModal = modals.find(isModalOpen);
   if (openModal) { openModal.hidden = true; return true; }
@@ -1669,13 +1675,52 @@ Lyrics.onSync = updateLyricsHighlight;
     if (typeof showMainScreen === 'function') showMainScreen('admin');
   });
   var playlistsAdmin = document.getElementById('btn-playlists-admin');
-  if (playlistsAdmin) playlistsAdmin.addEventListener('click', function() {
-    showMainScreen('player');
-    setTimeout(function() {
-      setActiveTab('lists');
-      updateTabs();
-    }, 80);
+  var modalPlaylists = document.getElementById('modal-playlists');
+  var playlistsModalBody = document.getElementById('playlists-modal-body');
+  var playlistsModalClose = document.getElementById('playlists-modal-close');
+  var playlistsOriginalParent = null;
+  var playlistsOriginalNext = null;
+
+  if (playlistsAdmin) playlistsAdmin.addEventListener('click', async function() {
+    if (!modalPlaylists || !playlistsModalBody || !listsPanel) return;
+    // Guardar posición original de los paneles (solo la primera vez)
+    if (!playlistsOriginalParent) {
+      playlistsOriginalParent = listsPanel.parentNode;
+      playlistsOriginalNext = listsPanel.nextSibling;
+    }
+    // Mover los paneles al modal
+    playlistsModalBody.appendChild(listsPanel);
+    playlistsModalBody.appendChild(listDetail);
+    listsPanel.hidden = false;
+    listDetail.hidden = true;
+    activeListId = null;
+    await renderListsPanel();
+    modalPlaylists.hidden = false;
   });
+
+  function closePlaylistsModal() {
+    if (!modalPlaylists) return;
+    modalPlaylists.hidden = true;
+    // Devolver los paneles a su lugar original
+    if (playlistsOriginalParent) {
+      if (playlistsOriginalNext) {
+        playlistsOriginalParent.insertBefore(listsPanel, playlistsOriginalNext);
+        playlistsOriginalParent.insertBefore(listDetail, playlistsOriginalNext);
+      } else {
+        playlistsOriginalParent.appendChild(listsPanel);
+        playlistsOriginalParent.appendChild(listDetail);
+      }
+    }
+    listsPanel.hidden = true;
+    listDetail.hidden = true;
+    activeListId = null;
+  }
+
+  if (playlistsModalClose) playlistsModalClose.addEventListener('click', closePlaylistsModal);
+  if (modalPlaylists) modalPlaylists.addEventListener('click', function(e) {
+    if (e.target === modalPlaylists) closePlaylistsModal();
+  });
+  window.closePlaylistsModal = closePlaylistsModal;
 })();
 
 (async function init() {
