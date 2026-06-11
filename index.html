@@ -33,9 +33,16 @@
     </div>
 
     <section class="now-card learning-card" aria-label="Now playing and lyrics">
-      <div class="track-info compact-track-info">
-        <div id="track-title" class="track-title">No track loaded</div>
-        <div id="track-artist" class="track-artist">Add songs to get started</div>
+      <div id="track-info-swipe" class="track-info-swipe">
+        <div id="hidden-controls-panel" class="hidden-controls-panel" aria-hidden="true">
+          <button id="btn-sleep-swipe" class="hidden-panel-btn" aria-label="Sleep timer"><i class="ti ti-moon-stars"></i><span>Sleep</span></button>
+          <button id="btn-theme-swipe" class="hidden-panel-btn" aria-label="Themes"><i class="ti ti-palette"></i><span>Theme</span></button>
+          <button id="btn-admin-swipe" class="hidden-panel-btn" aria-label="Settings"><i class="ti ti-settings"></i><span>Settings</span></button>
+        </div>
+        <div class="track-info compact-track-info">
+          <div id="track-title" class="track-title">No track loaded</div>
+          <div id="track-artist" class="track-artist">Add songs to get started</div>
+        </div>
       </div>
 
       <div id="inline-lyrics" class="inline-lyrics learning-lyrics" aria-live="polite" title="Double tap for full screen lyrics">
@@ -72,6 +79,10 @@
         </div>
       </div>
     </section>
+
+    <div id="resize-handle" class="resize-handle" aria-hidden="true">
+      <div class="resize-handle-bar"></div>
+    </div>
 
     <section class="playlist-section main-list-section" aria-label="Song list">
       <div class="list-topline main-list-topline">
