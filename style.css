@@ -1812,3 +1812,67 @@ body[data-night="true"]::before { opacity: 0.18; }
 .playlists-modal-body .list-detail {
   hidden: unset;
 }
+
+/* ── Resize handle (drag to expand playlist / shrink lyrics) ── */
+.resize-handle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 18px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.resize-handle-bar {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.15s, width 0.15s;
+}
+.resize-handle:active .resize-handle-bar,
+.resize-handle.dragging .resize-handle-bar {
+  background: var(--accent2);
+  width: 48px;
+}
+
+/* ── Swipe panel for theme/sleep/settings ── */
+.track-info-swipe {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.hidden-controls-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+  z-index: 1;
+}
+.track-info-swipe.panel-open .hidden-controls-panel {
+  transform: translateX(0);
+}
+.track-info-swipe.panel-open .compact-track-info {
+  transform: translateX(100%);
+  opacity: 0;
+}
+.compact-track-info {
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+.hidden-panel-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 11px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  padding: 6px 10px;
+}
+.hidden-panel-btn i { font-size: 22px; color: var(--accent2); }
