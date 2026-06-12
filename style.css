@@ -1126,6 +1126,13 @@ body[data-night="true"]::before, body.night-mode::before { opacity: 0.18; filter
   display: flex;
   flex-direction: column;
   border-radius: clamp(26px, 7vw, 38px);
+  touch-action: none;
+}
+.learning-card .progress-section,
+.learning-card .controls-row,
+.learning-card button,
+.learning-card input {
+  touch-action: auto;
 }
 .learning-card::after { opacity: 0.55; transform: scale(1.35); }
 .orb-artwork, .brand-icon, .brand-lockup img { display: none !important; }
@@ -1571,10 +1578,7 @@ body[data-night="true"]::before { opacity: 0.18; }
 .main-list-topline {
   align-items: center;
   gap: 8px;
-  touch-action: none;
-  cursor: ns-resize;
 }
-.main-list-topline button { touch-action: auto; cursor: pointer; }
 .main-list-section .playlist-tabs {
   padding: 0 0 6px;
 }
