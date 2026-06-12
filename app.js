@@ -1721,38 +1721,40 @@ Lyrics.onSync = updateLyricsHighlight;
     trackSwipe.addEventListener('pointercancel', function() { swiping = false; });
   }
 
-  // Resize handle: arrastrar para ajustar altura de letras vs lista
+  // Resize: arrastrar verticalmente desde casi cualquier parte de la tarjeta
+  // de letras (como Spotify). Si el dedo no se mueve, el tap normal sigue
+  // funcionando (botones, líneas de letra, doble-tap a fullscreen, etc).
   var resizeHandle = document.getElementById('resize-handle');
   var learningCard = document.querySelector('.learning-card');
-  var playlistSection = document.querySelector('.playlist-section');
-  var listTopline = document.querySelector('.main-list-topline');
   var screenPlayerEl = document.getElementById('screen-player');
 
-  function setupResizeDrag(zone) {
+  function setupResizeDrag(zone, opts) {
+    opts = opts || {};
     if (!zone || !learningCard || !screenPlayerEl) return;
     var dragStartY = 0;
     var startH = 0;
     var dragging = false;
-    var draggingPointerId = null;
+    var activePointerId = null;
+    var threshold = opts.threshold || 8;
 
     zone.addEventListener('pointerdown', function(e) {
-      // Si es la barra de tabs, solo iniciar drag si no se toca un botón directamente
-      if (zone === listTopline && e.target.closest('button')) return;
+      // No iniciar drag sobre controles interactivos
+      if (e.target.closest('button, input, .progress-section, .controls-row')) return;
       dragStartY = e.clientY;
       startH = learningCard.getBoundingClientRect().height;
       dragging = false;
-      draggingPointerId = e.pointerId;
+      activePointerId = e.pointerId;
     });
 
     zone.addEventListener('pointermove', function(e) {
-      if (draggingPointerId === null || e.buttons !== 1) return;
+      if (activePointerId === null || e.buttons !== 1) return;
       var dy = e.clientY - dragStartY;
       if (!dragging) {
-        if (Math.abs(dy) < 6) return; // umbral para distinguir de un tap
+        if (Math.abs(dy) < threshold) return;
         dragging = true;
         if (resizeHandle) resizeHandle.classList.add('dragging');
         learningCard.style.transition = 'none';
-        try { zone.setPointerCapture(draggingPointerId); } catch (_) {}
+        try { zone.setPointerCapture(activePointerId); } catch (_) {}
       }
       var totalH = screenPlayerEl.getBoundingClientRect().height;
       var newH = startH + dy;
@@ -1762,12 +1764,12 @@ Lyrics.onSync = updateLyricsHighlight;
       learningCard.style.flex = '0 0 ' + newH + 'px';
 
       if (newH >= maxH - 4 && typeof enterCleanFullscreen === 'function') {
-        try { zone.releasePointerCapture(draggingPointerId); } catch (_) {}
+        try { zone.releasePointerCapture(activePointerId); } catch (_) {}
         learningCard.style.flex = '';
         learningCard.style.transition = '';
         if (resizeHandle) resizeHandle.classList.remove('dragging');
         dragging = false;
-        draggingPointerId = null;
+        activePointerId = null;
         enterCleanFullscreen();
       }
     });
@@ -1776,14 +1778,16 @@ Lyrics.onSync = updateLyricsHighlight;
       if (resizeHandle) resizeHandle.classList.remove('dragging');
       learningCard.style.transition = '';
       dragging = false;
-      draggingPointerId = null;
+      activePointerId = null;
     }
     zone.addEventListener('pointerup', endDrag);
     zone.addEventListener('pointercancel', endDrag);
   }
 
-  setupResizeDrag(resizeHandle);
-  setupResizeDrag(listTopline);
+  // Toda la tarjeta de letras responde al arrastre (excepto controles)
+  setupResizeDrag(learningCard);
+  // El tirador explícito también funciona (umbral menor, ya que es su único propósito)
+  setupResizeDrag(resizeHandle, { threshold: 2 });
   var playlistsAdmin = document.getElementById('btn-playlists-admin');
   var modalPlaylists = document.getElementById('modal-playlists');
   var playlistsModalBody = document.getElementById('playlists-modal-body');
