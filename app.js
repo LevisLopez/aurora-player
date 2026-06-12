@@ -1725,42 +1725,65 @@ Lyrics.onSync = updateLyricsHighlight;
   var resizeHandle = document.getElementById('resize-handle');
   var learningCard = document.querySelector('.learning-card');
   var playlistSection = document.querySelector('.playlist-section');
-  if (resizeHandle && learningCard && playlistSection) {
-    var dragStartY = 0;
-    var startCardFlex = 0;
-    var screenPlayerEl = document.getElementById('screen-player');
+  var listTopline = document.querySelector('.main-list-topline');
+  var screenPlayerEl = document.getElementById('screen-player');
 
-    resizeHandle.addEventListener('pointerdown', function(e) {
+  function setupResizeDrag(zone) {
+    if (!zone || !learningCard || !screenPlayerEl) return;
+    var dragStartY = 0;
+    var startH = 0;
+    var dragging = false;
+    var draggingPointerId = null;
+
+    zone.addEventListener('pointerdown', function(e) {
+      // Si es la barra de tabs, solo iniciar drag si no se toca un botón directamente
+      if (zone === listTopline && e.target.closest('button')) return;
       dragStartY = e.clientY;
-      startCardFlex = learningCard.getBoundingClientRect().height;
-      resizeHandle.classList.add('dragging');
-      resizeHandle.setPointerCapture(e.pointerId);
-      learningCard.style.transition = 'none';
+      startH = learningCard.getBoundingClientRect().height;
+      dragging = false;
+      draggingPointerId = e.pointerId;
     });
-    resizeHandle.addEventListener('pointermove', function(e) {
-      if (e.buttons !== 1) return;
+
+    zone.addEventListener('pointermove', function(e) {
+      if (draggingPointerId === null || e.buttons !== 1) return;
       var dy = e.clientY - dragStartY;
+      if (!dragging) {
+        if (Math.abs(dy) < 6) return; // umbral para distinguir de un tap
+        dragging = true;
+        if (resizeHandle) resizeHandle.classList.add('dragging');
+        learningCard.style.transition = 'none';
+        try { zone.setPointerCapture(draggingPointerId); } catch (_) {}
+      }
       var totalH = screenPlayerEl.getBoundingClientRect().height;
-      var newH = startCardFlex + dy;
-      var minH = totalH * 0.28;
+      var newH = startH + dy;
+      var minH = totalH * 0.22;
       var maxH = totalH * 0.85;
       newH = Math.min(Math.max(newH, minH), maxH);
       learningCard.style.flex = '0 0 ' + newH + 'px';
 
-      // Si arrastra muy cerca del tope, abrir fullscreen de letras
       if (newH >= maxH - 4 && typeof enterCleanFullscreen === 'function') {
-        resizeHandle.releasePointerCapture(e.pointerId);
+        try { zone.releasePointerCapture(draggingPointerId); } catch (_) {}
         learningCard.style.flex = '';
         learningCard.style.transition = '';
-        resizeHandle.classList.remove('dragging');
+        if (resizeHandle) resizeHandle.classList.remove('dragging');
+        dragging = false;
+        draggingPointerId = null;
         enterCleanFullscreen();
       }
     });
-    resizeHandle.addEventListener('pointerup', function() {
-      resizeHandle.classList.remove('dragging');
+
+    function endDrag() {
+      if (resizeHandle) resizeHandle.classList.remove('dragging');
       learningCard.style.transition = '';
-    });
+      dragging = false;
+      draggingPointerId = null;
+    }
+    zone.addEventListener('pointerup', endDrag);
+    zone.addEventListener('pointercancel', endDrag);
   }
+
+  setupResizeDrag(resizeHandle);
+  setupResizeDrag(listTopline);
   var playlistsAdmin = document.getElementById('btn-playlists-admin');
   var modalPlaylists = document.getElementById('modal-playlists');
   var playlistsModalBody = document.getElementById('playlists-modal-body');
