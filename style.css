@@ -1571,7 +1571,10 @@ body[data-night="true"]::before { opacity: 0.18; }
 .main-list-topline {
   align-items: center;
   gap: 8px;
+  touch-action: none;
+  cursor: ns-resize;
 }
+.main-list-topline button { touch-action: auto; cursor: pointer; }
 .main-list-section .playlist-tabs {
   padding: 0 0 6px;
 }
@@ -1819,21 +1822,34 @@ body[data-night="true"]::before { opacity: 0.18; }
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 18px;
+  gap: 8px;
+  height: 40px;
   cursor: ns-resize;
   touch-action: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .resize-handle-bar {
-  width: 36px;
-  height: 4px;
-  border-radius: 2px;
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
   background: var(--border);
   transition: background 0.15s, width 0.15s;
+}
+.resize-chevron {
+  font-size: 13px;
+  color: var(--text3);
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s;
 }
 .resize-handle:active .resize-handle-bar,
 .resize-handle.dragging .resize-handle-bar {
   background: var(--accent2);
-  width: 48px;
+  width: 56px;
+}
+.resize-handle:active .resize-chevron,
+.resize-handle.dragging .resize-chevron {
+  color: var(--accent2);
+  opacity: 1;
 }
 
 /* ── Swipe panel for theme/sleep/settings ── */
