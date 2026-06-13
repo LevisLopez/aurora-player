@@ -1578,7 +1578,10 @@ body[data-night="true"]::before { opacity: 0.18; }
 .main-list-topline {
   align-items: center;
   gap: 8px;
+  touch-action: none;
 }
+.main-list-topline button,
+.main-list-topline input { touch-action: auto; }
 .main-list-section .playlist-tabs {
   padding: 0 0 6px;
 }
