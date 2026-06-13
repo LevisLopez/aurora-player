@@ -1721,12 +1721,25 @@ Lyrics.onSync = updateLyricsHighlight;
     trackSwipe.addEventListener('pointercancel', function() { swiping = false; });
   }
 
-  // Resize: arrastrar verticalmente desde casi cualquier parte de la tarjeta
-  // de letras (como Spotify). Si el dedo no se mueve, el tap normal sigue
-  // funcionando (botones, líneas de letra, doble-tap a fullscreen, etc).
+  // Resize con "snap" a 3 tamaños (como Spotify): arrastras desde casi
+  // cualquier parte (letra o lista) y al soltar se ajusta solo a
+  // pequeño / mediano / grande. Un tap normal sigue funcionando igual
+  // (botones, líneas de letra, doble-tap a fullscreen, etc).
   var resizeHandle = document.getElementById('resize-handle');
   var learningCard = document.querySelector('.learning-card');
+  var playlistSectionEl = document.querySelector('.main-list-topline');
   var screenPlayerEl = document.getElementById('screen-player');
+
+  var SNAP_RATIOS = [0.30, 0.55, 0.85]; // pequeño / mediano / grande (proporción de la pantalla para la letra)
+  var snapIndex = 1; // arranca en "mediano"
+
+  function applySnap(index, animate) {
+    snapIndex = Math.max(0, Math.min(SNAP_RATIOS.length - 1, index));
+    var totalH = screenPlayerEl.getBoundingClientRect().height;
+    var h = totalH * SNAP_RATIOS[snapIndex];
+    learningCard.style.transition = animate ? 'flex-basis 0.28s cubic-bezier(.2,.8,.2,1)' : 'none';
+    learningCard.style.flex = '0 0 ' + h + 'px';
+  }
 
   function setupResizeDrag(zone, opts) {
     opts = opts || {};
@@ -1738,7 +1751,7 @@ Lyrics.onSync = updateLyricsHighlight;
     var threshold = opts.threshold || 8;
 
     zone.addEventListener('pointerdown', function(e) {
-      // No iniciar drag sobre controles interactivos
+      // No iniciar drag sobre controles interactivos ni filas de canciones
       if (e.target.closest('button, input, .progress-section, .controls-row')) return;
       dragStartY = e.clientY;
       startH = learningCard.getBoundingClientRect().height;
@@ -1758,25 +1771,34 @@ Lyrics.onSync = updateLyricsHighlight;
       }
       var totalH = screenPlayerEl.getBoundingClientRect().height;
       var newH = startH + dy;
-      var minH = totalH * 0.22;
-      var maxH = totalH * 0.85;
+      var minH = totalH * (SNAP_RATIOS[0] - 0.08);
+      var maxH = totalH * 0.94;
       newH = Math.min(Math.max(newH, minH), maxH);
       learningCard.style.flex = '0 0 ' + newH + 'px';
-
-      if (newH >= maxH - 4 && typeof enterCleanFullscreen === 'function') {
-        try { zone.releasePointerCapture(activePointerId); } catch (_) {}
-        learningCard.style.flex = '';
-        learningCard.style.transition = '';
-        if (resizeHandle) resizeHandle.classList.remove('dragging');
-        dragging = false;
-        activePointerId = null;
-        enterCleanFullscreen();
-      }
     });
 
-    function endDrag() {
+    function endDrag(e) {
+      if (activePointerId === null) return;
       if (resizeHandle) resizeHandle.classList.remove('dragging');
-      learningCard.style.transition = '';
+      if (dragging) {
+        var totalH = screenPlayerEl.getBoundingClientRect().height;
+        var curH = learningCard.getBoundingClientRect().height;
+        var ratio = curH / totalH;
+
+        // Si se arrastró casi al máximo, abrir pantalla completa de letras
+        if (ratio >= 0.90 && typeof enterCleanFullscreen === 'function') {
+          applySnap(SNAP_RATIOS.length - 1, true);
+          enterCleanFullscreen();
+        } else {
+          // Buscar el snap más cercano
+          var best = 0, bestDist = Infinity;
+          for (var i = 0; i < SNAP_RATIOS.length; i++) {
+            var d = Math.abs(SNAP_RATIOS[i] - ratio);
+            if (d < bestDist) { bestDist = d; best = i; }
+          }
+          applySnap(best, true);
+        }
+      }
       dragging = false;
       activePointerId = null;
     }
@@ -1784,10 +1806,22 @@ Lyrics.onSync = updateLyricsHighlight;
     zone.addEventListener('pointercancel', endDrag);
   }
 
-  // Toda la tarjeta de letras responde al arrastre (excepto controles)
+  // La tarjeta de letras y la sección de lista responden al arrastre
   setupResizeDrag(learningCard);
-  // El tirador explícito también funciona (umbral menor, ya que es su único propósito)
+  if (playlistSectionEl) setupResizeDrag(playlistSectionEl);
+  // El tirador explícito también funciona (umbral menor)
   setupResizeDrag(resizeHandle, { threshold: 2 });
+
+  // Tocar el tirador alterna entre los 3 tamaños
+  if (resizeHandle) {
+    resizeHandle.addEventListener('click', function() {
+      applySnap((snapIndex + 1) % SNAP_RATIOS.length, true);
+    });
+  }
+
+  // Tamaño inicial
+  applySnap(snapIndex, false);
+
   var playlistsAdmin = document.getElementById('btn-playlists-admin');
   var modalPlaylists = document.getElementById('modal-playlists');
   var playlistsModalBody = document.getElementById('playlists-modal-body');
