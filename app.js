@@ -1749,9 +1749,10 @@ Lyrics.onSync = updateLyricsHighlight;
     var dragging = false;
     var activePointerId = null;
     var threshold = opts.threshold || 8;
+    var scrollEl = opts.scrollEl || null; // si se da, respeta el scroll de este elemento
 
     zone.addEventListener('pointerdown', function(e) {
-      // No iniciar drag sobre controles interactivos ni filas de canciones
+      // No iniciar drag sobre controles interactivos
       if (e.target.closest('button, input, .progress-section, .controls-row')) return;
       dragStartY = e.clientY;
       startH = learningCard.getBoundingClientRect().height;
@@ -1762,20 +1763,33 @@ Lyrics.onSync = updateLyricsHighlight;
     zone.addEventListener('pointermove', function(e) {
       if (activePointerId === null || e.buttons !== 1) return;
       var dy = e.clientY - dragStartY;
+
       if (!dragging) {
         if (Math.abs(dy) < threshold) return;
+
+        if (scrollEl) {
+          var atTop = scrollEl.scrollTop <= 0;
+          var atBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 1;
+          // dy > 0 = dedo bajando = lista quiere mostrar contenido de arriba (solo posible si atTop)
+          // dy < 0 = dedo subiendo = lista quiere mostrar contenido de abajo (solo posible si atBottom)
+          var canIntercept = (dy > 0 && atTop) || (dy < 0 && atBottom);
+          if (!canIntercept) return; // dejar que el scroll nativo actúe
+        }
+
         dragging = true;
         if (resizeHandle) resizeHandle.classList.add('dragging');
         learningCard.style.transition = 'none';
         try { zone.setPointerCapture(activePointerId); } catch (_) {}
       }
+
       var totalH = screenPlayerEl.getBoundingClientRect().height;
       var newH = startH + dy;
       var minH = totalH * (SNAP_RATIOS[0] - 0.08);
       var maxH = totalH * 0.94;
       newH = Math.min(Math.max(newH, minH), maxH);
       learningCard.style.flex = '0 0 ' + newH + 'px';
-    });
+      e.preventDefault();
+    }, { passive: false });
 
     function endDrag(e) {
       if (activePointerId === null) return;
@@ -1806,9 +1820,14 @@ Lyrics.onSync = updateLyricsHighlight;
     zone.addEventListener('pointercancel', endDrag);
   }
 
-  // La tarjeta de letras y la sección de lista responden al arrastre
+  // La tarjeta de letras responde al arrastre desde casi cualquier punto
   setupResizeDrag(learningCard);
+  // La barra de pestañas de la lista también (no scrollea, así que siempre intercepta)
   if (playlistSectionEl) setupResizeDrag(playlistSectionEl);
+  // La lista de canciones: respeta su propio scroll, pero permite redimensionar
+  // cuando el dedo arrastra "más allá" del límite de scroll (arriba/abajo)
+  var playlistListEl = document.getElementById('playlist');
+  if (playlistListEl) setupResizeDrag(playlistListEl, { scrollEl: playlistListEl });
   // El tirador explícito también funciona (umbral menor)
   setupResizeDrag(resizeHandle, { threshold: 2 });
 
