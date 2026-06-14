@@ -1166,11 +1166,11 @@ body[data-night="true"]::before, body.night-mode::before { opacity: 0.18; filter
   width: 100%;
   text-align: left;
   color: rgba(244,248,255,0.30);
-  font-size: clamp(18px, 6.2vw, 32px);
+  font-size: clamp(22px, 7vw, 38px);
   line-height: 1.18;
   font-weight: 800;
   letter-spacing: -0.045em;
-  padding: clamp(9px, 2.4vw, 15px) 2px;
+  padding: clamp(11px, 2.8vw, 17px) 2px;
   transition: opacity 0.22s ease, color 0.24s ease, transform 0.28s ease, filter 0.24s ease;
   opacity: 0.34;
 }
@@ -1513,8 +1513,9 @@ body[data-night="true"]::before { opacity: 0.18; }
 }
 .minimal-topbar {
   justify-content: flex-end;
-  padding: calc(10px + var(--safe-top)) clamp(12px, 4vw, 22px) 6px;
-  min-height: calc(60px + var(--safe-top));
+  padding: var(--safe-top) 0 0;
+  min-height: var(--safe-top);
+  height: var(--safe-top);
 }
 .silent-brand { flex: 1; min-width: 0; }
 .minimal-actions { gap: clamp(6px, 2.4vw, 10px); }
@@ -1899,3 +1900,14 @@ body[data-night="true"]::before { opacity: 0.18; }
   padding: 6px 10px;
 }
 .hidden-panel-btn i { font-size: 22px; color: var(--accent2); }
+
+/* ── Click en línea de letra → feedback visual ── */
+.lyrics-flow .flow-line {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.lyrics-flow .flow-line:active {
+  opacity: 0.7 !important;
+  transform: scale(0.97) !important;
+  transition: transform 0.08s ease, opacity 0.08s ease !important;
+}
