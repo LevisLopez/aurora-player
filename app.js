@@ -1009,10 +1009,23 @@ function renderLyricsCollection(container, lines, className = 'flow-line') {
     return;
   }
   container.innerHTML = lines.map((line, index) => `
-    <div class="${className}" data-idx="${index}">
+    <div class="${className}" data-idx="${index}" data-time="${line.time}" style="cursor:pointer;">
       ${wordSpans(line)}
     </div>
   `).join('');
+
+  // Click en línea → seek al tiempo de esa línea
+  container.querySelectorAll('[data-time]').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var t = parseFloat(el.dataset.time);
+      if (Number.isFinite(t) && typeof Player !== 'undefined') {
+        Player.seek(t);
+        // Si estaba pausado, reproducir
+        if (!Player.isPlaying) Player.play();
+      }
+    });
+  });
 }
 
 function renderInlineLyricsList() {
