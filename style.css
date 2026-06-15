@@ -249,27 +249,15 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .now-card {
   margin: 8px 16px 12px;
   padding: 18px 16px 14px;
-  border-radius: 32px;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.035)),
-    var(--card);
-  border: 1px solid var(--border);
-  box-shadow: 0 24px 70px var(--shadow), inset 0 1px rgba(255,255,255,0.09);
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
 }
-.now-card::after {
-  content: '';
-  position: absolute;
-  right: -70px;
-  top: -80px;
-  width: 190px;
-  height: 190px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--glow), transparent 68%);
-  pointer-events: none;
-}
+.now-card::after { display: none; }
 .orb-artwork {
   width: 88px;
   height: 88px;
@@ -1121,12 +1109,13 @@ body[data-night="true"]::before, body.night-mode::before { opacity: 0.18; filter
 .learning-card {
   flex: 1 1 auto;
   min-height: 0;
-  margin: 2px clamp(10px, 3vw, 18px) calc(8px + var(--safe-bottom));
-  padding: clamp(12px, 3vw, 18px);
+  margin: 0;
+  padding: 6px clamp(18px, 5vw, 28px) 6px;
   display: flex;
   flex-direction: column;
-  border-radius: clamp(26px, 7vw, 38px);
+  border-radius: 0;
   touch-action: none;
+  background: transparent;
 }
 .learning-card .progress-section,
 .learning-card .controls-row,
@@ -1134,7 +1123,7 @@ body[data-night="true"]::before, body.night-mode::before { opacity: 0.18; filter
 .learning-card input {
   touch-action: auto;
 }
-.learning-card::after { opacity: 0.55; transform: scale(1.35); }
+.learning-card::after { display: none; }
 .orb-artwork, .brand-icon, .brand-lockup img { display: none !important; }
 .compact-track-info { flex-shrink: 0; padding: 0 clamp(2px, 2vw, 12px) 8px; }
 .compact-track-info .track-title { font-size: clamp(18px, 5vw, 28px); }
@@ -1184,7 +1173,10 @@ body[data-night="true"]::before, body.night-mode::before { opacity: 0.18; filter
 .lyrics-flow .flow-line.future { opacity: 0.36; }
 .lyrics-flow .flow-line .lyric-word { display: inline-block; margin: 0 0.09em 0.12em 0; }
 .bottom-player-panel { flex-shrink: 0; }
-.clean-controls-row { padding-top: 5px; gap: clamp(10px, 4vw, 20px); }
+.clean-controls-row {
+  border-bottom: 0.5px solid rgba(255,255,255,0.06);
+  padding-bottom: 10px;
+  margin-bottom: 0; padding-top: 5px; gap: clamp(10px, 4vw, 20px); }
 .clean-controls-row .ctrl-btn { background: rgba(255,255,255,0.035); }
 .clean-controls-row .play-btn { width: clamp(58px, 16vw, 72px); height: clamp(58px, 16vw, 72px); }
 .legacy-inline { display: none !important; }
@@ -1531,11 +1523,11 @@ body[data-night="true"]::before { opacity: 0.18; }
 .subtle-online-btn { color: var(--accent2) !important; }
 
 .learning-card {
-  flex: 0 0 clamp(330px, 54vh, 520px);
+  flex: 0 0 clamp(300px, 52vh, 500px);
   min-height: 0;
-  margin: 3px clamp(10px, 3.2vw, 18px) 8px;
-  padding: clamp(11px, 3vw, 17px);
-  border-radius: clamp(25px, 6vw, 36px);
+  margin: 0;
+  padding: 6px clamp(18px, 5vw, 28px) 6px;
+  border-radius: 0;
 }
 .learning-card .track-info { padding-bottom: clamp(5px, 1.8vw, 9px); }
 .compact-track-info .track-title { font-size: clamp(18px, 5.2vw, 28px); }
@@ -1559,7 +1551,10 @@ body[data-night="true"]::before { opacity: 0.18; }
 }
 .lyrics-flow .flow-line.active { transform: scale(1.025); }
 .bottom-player-panel .progress-section { padding-left: 4px; padding-right: 4px; }
-.clean-controls-row { padding-top: 4px; }
+.clean-controls-row {
+  border-bottom: 0.5px solid rgba(255,255,255,0.06);
+  padding-bottom: 10px;
+  margin-bottom: 0; padding-top: 4px; }
 .clean-controls-row .ctrl-btn {
   width: clamp(40px, 12vw, 50px);
   height: clamp(40px, 12vw, 50px);
@@ -1830,12 +1825,14 @@ body[data-night="true"]::before { opacity: 0.18; }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  height: 40px;
+  gap: 6px;
+  height: 28px;
   cursor: ns-resize;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
+  opacity: 0.4;
 }
+.resize-handle:active { opacity: 1; }
 .resize-handle-bar {
   width: 44px;
   height: 5px;
