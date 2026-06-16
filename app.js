@@ -1694,7 +1694,32 @@ Player.onTrackChange = (track) => {
   if (track) loadLyricsForTrack(track, lyricsVisible);
   else if (lyricsVisible) showLyricsState('no-track');
   renderPlaylist();
+  updateFavNowBtn(track);
 };
+
+function updateFavNowBtn(track) {
+  const icon = document.getElementById('fav-now-icon');
+  const btn  = document.getElementById('btn-fav-now');
+  if (!icon || !btn) return;
+  const isFav = track?.favorite === true;
+  icon.className = isFav ? 'ti ti-heart-filled' : 'ti ti-heart';
+  btn.style.color = isFav ? 'var(--fav, #fb6fb8)' : '';
+}
+
+const btnFavNow = document.getElementById('btn-fav-now');
+if (btnFavNow) {
+  btnFavNow.addEventListener('click', async () => {
+    const track = Player.currentTrack();
+    if (!track) return;
+    const next = await dbToggleFavorite(track.id);
+    // Actualizar en memoria
+    const t = Player.tracks.find(t => t.id === track.id);
+    if (t) t.favorite = next;
+    updateFavNowBtn({ ...track, favorite: next });
+    renderPlaylist();
+    showToast(next ? '♥ Added to Favorites' : 'Removed from Favorites');
+  });
+}
 
 Lyrics.onSync = updateLyricsHighlight;
 
