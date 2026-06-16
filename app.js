@@ -1014,15 +1014,28 @@ function renderLyricsCollection(container, lines, className = 'flow-line') {
     </div>
   `).join('');
 
-  // Click en línea → seek al tiempo de esa línea
+  // Tap en línea:
+  // - Tap simple → seek a esa línea
+  // - Doble tap → entrar en fullscreen (igual que antes)
+  var tapTimer = null;
   container.querySelectorAll('[data-time]').forEach(function(el) {
     el.addEventListener('click', function(e) {
       e.stopPropagation();
       var t = parseFloat(el.dataset.time);
-      if (Number.isFinite(t) && typeof Player !== 'undefined') {
-        Player.seek(t);
-        // Si estaba pausado, reproducir
-        if (!Player.isPlaying) Player.play();
+      if (tapTimer) {
+        // Doble tap — cancelar seek pendiente y abrir fullscreen
+        clearTimeout(tapTimer);
+        tapTimer = null;
+        if (typeof enterCleanFullscreen === 'function') enterCleanFullscreen();
+      } else {
+        // Esperar 250ms para ver si viene un segundo tap
+        tapTimer = setTimeout(function() {
+          tapTimer = null;
+          if (Number.isFinite(t) && typeof Player !== 'undefined') {
+            Player.seek(t);
+            if (!Player.isPlaying) Player.play();
+          }
+        }, 250);
       }
     });
   });
@@ -1590,7 +1603,11 @@ if (fullscreenPrev) fullscreenPrev.addEventListener('click', (event) => { event.
 if (fullscreenNext) fullscreenNext.addEventListener('click', (event) => { event.stopPropagation(); Player.next(true); showFullscreenControls(); });
 if (fullscreenPlay) fullscreenPlay.addEventListener('click', (event) => { event.stopPropagation(); Player.togglePlay(); showFullscreenControls(); });
 if (fullscreenProgressWrap) fullscreenProgressWrap.addEventListener('click', (event) => { event.stopPropagation(); seekFromPointer(event, fullscreenProgressWrap); showFullscreenControls(); });
-if (cleanFullscreen) cleanFullscreen.addEventListener('click', (event) => { if (event.target.closest('button') || event.target.closest('.fullscreen-progress-wrap')) return; toggleFullscreenControls(); });
+if (cleanFullscreen) cleanFullscreen.addEventListener('click', (event) => {
+  // No activar toggle si el tap fue en una línea de letra o en botón
+  if (event.target.closest('button') || event.target.closest('.fullscreen-progress-wrap') || event.target.closest('.flow-line')) return;
+  toggleFullscreenControls();
+});
 lyricsContent.addEventListener('click', () => {
   const now = Date.now();
   if (now - lastLyricsTap < 320) toggleLyricsFullscreen();
