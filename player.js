@@ -105,7 +105,15 @@ const Player = (() => {
     countedTrackId = null;
 
     const full = await dbGetTrack(id);
-    if (!full || !full.blob) return;
+    if (!full || !full.blob) {
+      // Blob faltante — intentar con la siguiente canción en la cola
+      console.warn('[Player] Blob missing for track', id, '— skipping');
+      if (autoPlay && queuePos < queueIds.length - 1) {
+        queuePos++;
+        loadTrackById(queueIds[queuePos], true, 0);
+      }
+      return;
+    }
 
     currentObjectURL = URL.createObjectURL(full.blob);
     audio.src = currentObjectURL;
@@ -129,7 +137,10 @@ const Player = (() => {
 
     if (autoPlay) {
       const promise = audio.play();
-      if (promise) promise.catch(() => {});
+      if (promise) promise.catch(err => {
+        // Si play() falla (ej: política de autoplay del navegador), intentar de nuevo
+        console.warn('[Player] play() failed:', err.message);
+      });
     }
   }
 
@@ -327,6 +338,18 @@ const Player = (() => {
     } catch (_) {}
   }
 
+  audio.addEventListener('error', () => {
+    const err = audio.error;
+    console.warn('[Player] Audio error:', err?.code, err?.message);
+    // Si hay error cargando y había autoplay pendiente, saltar a la siguiente
+    if (isPlaying || audio.autoplay) {
+      if (queuePos < queueIds.length - 1) {
+        queuePos++;
+        loadTrackById(queueIds[queuePos], true, 0);
+      }
+    }
+  });
+
   audio.addEventListener('play', () => {
     isPlaying = true;
     document.body.classList.add('playing');
@@ -366,9 +389,16 @@ const Player = (() => {
     if (repeatMode === 'one') {
       audio.currentTime = 0;
       play();
-    } else if (queuePos < queueIds.length - 1 || repeatMode === 'all') {
+    } else if (queuePos < queueIds.length - 1) {
+      // Hay más canciones en la cola — avanzar
+      next(true);
+    } else if (repeatMode === 'all') {
+      // Última canción con repeat all — volver al inicio
       next(true);
     } else {
+      // Última canción, repeat none — volver al inicio pero sin reproducir
+      queuePos = 0;
+      loadTrackById(queueIds[0], false, 0);
       isPlaying = false;
       if (onPlayState) onPlayState(false);
     }
