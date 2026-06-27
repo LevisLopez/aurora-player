@@ -76,6 +76,7 @@
           <button id="btn-play" class="play-btn" aria-label="Play or pause" title="Play / Pause"><i class="ti ti-player-play" id="play-icon"></i></button>
           <button id="btn-next" class="ctrl-btn" aria-label="Next" title="Next"><i class="ti ti-player-skip-forward"></i></button>
           <button id="btn-repeat" class="ctrl-btn" aria-label="Repeat" title="Repeat"><i class="ti ti-repeat"></i></button>
+          <button id="btn-loop-line" class="ctrl-btn" aria-label="Loop current line" title="Loop line"><i class="ti ti-repeat-once"></i><span id="loop-count-badge">0</span></button>
           <button id="btn-fav-now" class="ctrl-btn fav-now-btn" aria-label="Favorite" title="Favorite"><i class="ti ti-heart" id="fav-now-icon"></i></button>
         </div>
       </div>
@@ -459,6 +460,18 @@
     </div>
     <button id="modal-sleep-cancel" class="modal-btn secondary full-width">Cancel</button>
   </div>
+</div>
+
+<!-- WORD TRANSLATION POPUP -->
+<div id="word-popup" role="tooltip" aria-live="polite">
+  <button class="word-popup-close" id="word-popup-close" aria-label="Close"><i class="ti ti-x"></i></button>
+  <div class="word-popup-word" id="word-popup-word"></div>
+  <div class="word-popup-ipa" id="word-popup-ipa"></div>
+  <div class="word-popup-divider"></div>
+  <div class="word-popup-translation" id="word-popup-translation"></div>
+  <div class="word-popup-loading" id="word-popup-loading">Translating...</div>
+  <div class="word-popup-divider"></div>
+  <div class="word-popup-tip">Tap a word in the lyrics to translate it</div>
 </div>
 
 <div id="toast" class="toast" aria-live="polite"></div>
