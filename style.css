@@ -302,35 +302,51 @@ body.playing .orb-artwork { animation: pulse-art 2.2s ease-in-out infinite; }
 .inline-lyrics {
   min-height: 118px;
   margin: 14px 2px 8px;
-  border-radius: 24px;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 10px 14px;
+  padding: 10px 20px;
   background: transparent;
   border: none;
   cursor: pointer;
   overflow: hidden;
   position: relative;
   z-index: 1;
+  /* Máscara degradado arriba/abajo — estilo Spotify */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 22%,
+    black 78%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 22%,
+    black 78%,
+    transparent 100%
+  );
 }
 .inline-line {
   width: 100%;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
   transition: color 0.25s ease, font-size 0.25s ease, opacity 0.25s ease;
 }
 .inline-line.prev, .inline-line.next { color: rgba(244,248,255,0.30); font-size: 14px; line-height: 1.3; }
 .inline-line.active {
   color: var(--text);
   font-size: clamp(22px, 5.8vw, 32px);
-  line-height: 1.18;
+  line-height: 1.22;
   font-weight: 800;
   letter-spacing: -0.04em;
-  text-shadow: 0 0 24px var(--glow);
+  text-shadow: 0 0 28px var(--glow), 0 0 60px var(--glow);
 }
 .inline-no-lyrics {
   position: absolute;
