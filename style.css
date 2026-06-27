@@ -122,6 +122,38 @@ body::before {
   filter: blur(10px);
   pointer-events: none;
   z-index: 0;
+  animation: bg-drift 12s ease-in-out infinite alternate;
+}
+
+/* Segunda orbe animada en la parte inferior */
+body::after {
+  content: '';
+  position: fixed;
+  bottom: -10%;
+  left: -10%;
+  right: -10%;
+  height: 340px;
+  background:
+    radial-gradient(circle at 70% 80%, var(--glow), transparent 30%),
+    radial-gradient(circle at 20% 90%, rgba(0, 229, 255, 0.10), transparent 28%);
+  filter: blur(14px);
+  pointer-events: none;
+  z-index: 0;
+  animation: bg-drift-reverse 15s ease-in-out infinite alternate;
+}
+
+@keyframes bg-drift {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0.85; }
+  33%  { transform: translate(3%, 4%) scale(1.04); opacity: 1; }
+  66%  { transform: translate(-2%, 2%) scale(0.97); opacity: 0.9; }
+  100% { transform: translate(4%, -3%) scale(1.06); opacity: 1; }
+}
+
+@keyframes bg-drift-reverse {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0.7; }
+  33%  { transform: translate(-3%, -2%) scale(1.05); opacity: 0.85; }
+  66%  { transform: translate(2%, -4%) scale(0.96); opacity: 0.75; }
+  100% { transform: translate(-4%, 2%) scale(1.03); opacity: 0.9; }
 }
 
 button, input, select { font: inherit; }
@@ -1926,4 +1958,136 @@ body[data-night="true"]::before { opacity: 0.18; }
   opacity: 0.7 !important;
   transform: scale(0.97) !important;
   transition: transform 0.08s ease, opacity 0.08s ease !important;
+}
+
+/* ══════════════════════════════════════
+   WORD TRANSLATION POPUP
+══════════════════════════════════════ */
+#word-popup {
+  position: fixed;
+  z-index: 9999;
+  background: rgba(10, 24, 48, 0.97);
+  border: 1px solid rgba(125, 184, 255, 0.28);
+  border-radius: 20px;
+  padding: 14px 18px 12px;
+  min-width: 200px;
+  max-width: 280px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+  transform: translateY(-8px);
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+}
+#word-popup.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.word-popup-word {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 3px;
+}
+.word-popup-ipa {
+  font-size: 13px;
+  color: var(--accent2);
+  font-weight: 600;
+  margin-bottom: 8px;
+  min-height: 18px;
+}
+.word-popup-translation {
+  font-size: 15px;
+  color: var(--accent3);
+  font-weight: 700;
+  margin-bottom: 10px;
+  min-height: 20px;
+}
+.word-popup-loading {
+  font-size: 12px;
+  color: var(--text3);
+  font-style: italic;
+}
+.word-popup-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 4px;
+}
+.word-popup-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.07);
+  margin: 8px 0;
+}
+.word-popup-tip {
+  font-size: 10px;
+  color: var(--text3);
+  text-align: center;
+}
+
+/* ══════════════════════════════════════
+   LOOP LINE BUTTON
+══════════════════════════════════════ */
+#btn-loop-line {
+  position: relative;
+}
+#btn-loop-line.loop-active {
+  color: var(--accent2) !important;
+  background: rgba(47,128,255,0.15) !important;
+  box-shadow: 0 0 18px var(--glow);
+}
+#btn-loop-line.loop-active::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent2);
+}
+/* Contador de loops */
+#loop-count-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+  border-radius: 999px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+#btn-loop-line.loop-active #loop-count-badge {
+  opacity: 1;
+}
+
+/* Lyric word — tap highlight */
+.lyric-word {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0 1px;
+  transition: background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.lyric-word:active {
+  background: rgba(255,255,255,0.15);
 }
