@@ -1945,6 +1945,172 @@ Lyrics.onSync = updateLyricsHighlight;
   window.closePlaylistsModal = closePlaylistsModal;
 })();
 
+
+// ══════════════════════════════════════════════════════
+// FEATURE 1: WORD TRANSLATION POPUP
+// ══════════════════════════════════════════════════════
+const wordPopup = document.getElementById('word-popup');
+const wordPopupWord = document.getElementById('word-popup-word');
+const wordPopupIpa = document.getElementById('word-popup-ipa');
+const wordPopupTranslation = document.getElementById('word-popup-translation');
+const wordPopupLoading = document.getElementById('word-popup-loading');
+const wordPopupClose = document.getElementById('word-popup-close');
+
+let wordPopupTimeout = null;
+
+function cleanWord(w) {
+  return (w || '').replace(/[^a-zA-Z'-]/g, '').toLowerCase().trim();
+}
+
+function positionPopup(targetEl) {
+  const rect = targetEl.getBoundingClientRect();
+  const popupW = 260;
+  let left = rect.left + rect.width / 2 - popupW / 2;
+  left = Math.max(10, Math.min(left, window.innerWidth - popupW - 10));
+  let top = rect.top - 10;
+  // Si está muy arriba, ponlo debajo
+  if (top < 120) top = rect.bottom + 10;
+  else top = rect.top - 170;
+  wordPopup.style.left = left + 'px';
+  wordPopup.style.top = top + 'px';
+  wordPopup.style.width = popupW + 'px';
+}
+
+async function fetchIpa(word) {
+  try {
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const phonetic = data[0]?.phonetics?.find(p => p.text)?.text || data[0]?.phonetic || null;
+    return phonetic;
+  } catch (_) { return null; }
+}
+
+async function fetchTranslation(word) {
+  try {
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|es`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const t = data?.responseData?.translatedText;
+    return t && t.toLowerCase() !== word.toLowerCase() ? t : null;
+  } catch (_) { return null; }
+}
+
+async function showWordPopup(word, targetEl) {
+  const clean = cleanWord(word);
+  if (!clean || clean.length < 2) return;
+
+  wordPopupWord.textContent = clean;
+  wordPopupIpa.textContent = '';
+  wordPopupTranslation.textContent = '';
+  wordPopupLoading.textContent = 'Translating...';
+  wordPopupLoading.style.display = 'block';
+
+  positionPopup(targetEl);
+  wordPopup.classList.add('visible');
+
+  const [ipa, translation] = await Promise.all([
+    fetchIpa(clean),
+    fetchTranslation(clean)
+  ]);
+
+  wordPopupIpa.textContent = ipa ? ipa : '';
+  wordPopupTranslation.textContent = translation ? translation : '(no translation found)';
+  wordPopupLoading.style.display = 'none';
+}
+
+function hideWordPopup() {
+  wordPopup.classList.remove('visible');
+}
+
+if (wordPopupClose) wordPopupClose.addEventListener('click', hideWordPopup);
+document.addEventListener('click', (e) => {
+  if (!wordPopup.contains(e.target) && !e.target.classList.contains('lyric-word')) {
+    hideWordPopup();
+  }
+});
+
+// Delegación de eventos para palabras en lyrics — tap en palabra
+document.addEventListener('click', (e) => {
+  const wordEl = e.target.closest('.lyric-word');
+  if (!wordEl) return;
+  e.stopPropagation();
+  const word = wordEl.textContent.trim();
+  showWordPopup(word, wordEl);
+});
+
+// ══════════════════════════════════════════════════════
+// FEATURE 2: LOOP CURRENT LINE
+// ══════════════════════════════════════════════════════
+let loopLineActive = false;
+let loopLineCount = 0;
+const btnLoopLine = document.getElementById('btn-loop-line');
+const loopCountBadge = document.getElementById('loop-count-badge');
+
+function setLoopLine(active) {
+  loopLineActive = active;
+  if (btnLoopLine) {
+    btnLoopLine.classList.toggle('loop-active', active);
+    btnLoopLine.title = active ? 'Loop ON — tap to stop' : 'Loop line';
+  }
+  if (!active) {
+    loopLineCount = 0;
+    if (loopCountBadge) loopCountBadge.textContent = '0';
+  }
+  showToast(active ? '🔁 Line loop ON — hold line to repeat' : 'Loop OFF');
+}
+
+if (btnLoopLine) {
+  btnLoopLine.addEventListener('click', () => setLoopLine(!loopLineActive));
+}
+
+// Sobrescribir el handler de tap en línea para añadir loop
+const origOnSync = Lyrics.onSync;
+let _loopCheckInterval = null;
+
+function startLineLoop(lineTime, lineEndTime) {
+  clearInterval(_loopCheckInterval);
+  _loopCheckInterval = setInterval(() => {
+    if (!loopLineActive) { clearInterval(_loopCheckInterval); return; }
+    const cur = Player.currentTime;
+    if (cur >= lineEndTime - 0.15) {
+      Player.seek(lineTime);
+      loopLineCount++;
+      if (loopCountBadge) loopCountBadge.textContent = loopLineCount;
+    }
+  }, 80);
+}
+
+// Mantener presionado una línea (long press) → activar loop en esa línea
+document.addEventListener('pointerdown', (e) => {
+  const lineEl = e.target.closest('[data-time][data-idx]');
+  if (!lineEl) return;
+  const pressTime = Date.now();
+  const lineTime = parseFloat(lineEl.dataset.time);
+
+  const onUp = () => {
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
+    const held = Date.now() - pressTime;
+    if (held >= 450) {
+      // Long press — activar loop en esta línea
+      e.preventDefault();
+      const idx = parseInt(lineEl.dataset.idx);
+      const lines = Lyrics.lines;
+      if (!lines[idx]) return;
+      const start = lines[idx].time;
+      const end = lines[idx].endTime || (lines[idx + 1] ? lines[idx + 1].time : start + 3);
+      Player.seek(start);
+      if (!Player.isPlaying) Player.play();
+      setLoopLine(true);
+      startLineLoop(start, end);
+      showToast('🔁 Looping this line');
+    }
+  };
+  document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', onUp);
+});
+
 (async function init() {
   applyTheme(localStorage.getItem(LS_THEME) || 'midnight');
   applyNightMode(localStorage.getItem(LS_NIGHT) === 'true');
