@@ -1554,8 +1554,8 @@ body[data-night="true"]::before { opacity: 0.18; }
 .learning-lyrics {
   margin: 3px 0 8px;
   border: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.20), rgba(0,0,0,0.045));
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.045);
+  background: transparent;
+  box-shadow: none;
 }
 .lyrics-flow {
   padding: 46% 0 48%;
