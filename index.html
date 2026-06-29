@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icons/icon-192.png" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Noto+Sans:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -155,10 +155,11 @@
 
 <!-- TRUE CLEAN FULLSCREEN LYRICS -->
   <section id="clean-fullscreen" class="clean-fullscreen" hidden aria-label="Full screen lyrics">
+    <!-- Botón atrás siempre visible, independiente de los controles -->
+    <button id="fullscreen-back" class="fullscreen-back" aria-label="Back to player"><i class="ti ti-arrow-left"></i></button>
     <div id="fullscreen-lyrics-flow" class="fullscreen-lyrics-flow" aria-live="polite"></div>
     <div id="fullscreen-empty" class="fullscreen-empty" hidden>Play a song with synced lyrics.</div>
     <div id="fullscreen-controls" class="fullscreen-controls" hidden>
-      <button id="fullscreen-back" class="fullscreen-back" aria-label="Back to player"><i class="ti ti-arrow-left"></i></button>
       <div class="fullscreen-timeline">
         <span id="fullscreen-time-current">0:00</span>
         <div id="fullscreen-progress-wrap" class="fullscreen-progress-wrap" role="slider" aria-label="Seek full screen audio">
