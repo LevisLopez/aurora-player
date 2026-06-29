@@ -1170,7 +1170,7 @@ async function enterCleanFullscreen() {
   if (Lyrics.enabled && !fullscreenLyricsFlow.children.length) renderInlineLyricsList();
   cleanFullscreen.hidden = false;
   requestAnimationFrame(() => cleanFullscreen.classList.add('active'));
-  hideFullscreenControls(true);
+  showFullscreenControls(false); // siempre visibles al entrar
   if (fullscreenEmpty) fullscreenEmpty.hidden = Lyrics.enabled && Lyrics.lines.length > 0;
   try {
     if (cleanFullscreen.requestFullscreen && document.fullscreenElement !== cleanFullscreen) {
@@ -1198,20 +1198,21 @@ function showFullscreenControls(autoHide = true) {
   cleanFullscreen.classList.add('controls-visible');
   fullscreenControls.classList.add('show');
   clearTimeout(fullscreenControlsTimer);
-  if (autoHide) fullscreenControlsTimer = setTimeout(() => hideFullscreenControls(), 4200);
+  // No auto-hide — controles siempre visibles en fullscreen
 }
 
 function hideFullscreenControls(force = false) {
   clearTimeout(fullscreenControlsTimer);
+  // En fullscreen los controles siempre quedan visibles salvo al entrar
+  if (!force) return;
   cleanFullscreen.classList.remove('controls-visible');
   fullscreenControls.classList.remove('show');
   if (force) fullscreenControls.hidden = true;
-  else setTimeout(() => { if (!cleanFullscreen.classList.contains('controls-visible')) fullscreenControls.hidden = true; }, 220);
 }
 
 function toggleFullscreenControls() {
-  if (cleanFullscreen.classList.contains('controls-visible')) hideFullscreenControls();
-  else showFullscreenControls();
+  // Tap en pantalla ya no oculta controles — siempre visibles
+  if (!cleanFullscreen.classList.contains('controls-visible')) showFullscreenControls(false);
 }
 
 async function toggleLyricsFullscreen() {
@@ -1964,13 +1965,13 @@ function cleanWord(w) {
 
 function positionPopup(targetEl) {
   const rect = targetEl.getBoundingClientRect();
-  const popupW = 260;
+  const popupW = 270;
   let left = rect.left + rect.width / 2 - popupW / 2;
   left = Math.max(10, Math.min(left, window.innerWidth - popupW - 10));
-  let top = rect.top - 10;
-  // Si está muy arriba, ponlo debajo
-  if (top < 120) top = rect.bottom + 10;
-  else top = rect.top - 170;
+  // Siempre arriba de la palabra — nunca abajo
+  const estimatedHeight = 160;
+  let top = rect.top - estimatedHeight - 12;
+  if (top < 60) top = rect.bottom + 10; // solo si no hay espacio arriba
   wordPopup.style.left = left + 'px';
   wordPopup.style.top = top + 'px';
   wordPopup.style.width = popupW + 'px';
@@ -1981,7 +1982,14 @@ async function fetchIpa(word) {
     const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
     if (!res.ok) return null;
     const data = await res.json();
-    const phonetic = data[0]?.phonetics?.find(p => p.text)?.text || data[0]?.phonetic || null;
+    // Buscar cualquier fonética con texto, incluyendo las anidadas
+    let phonetic = null;
+    if (data[0]?.phonetic) phonetic = data[0].phonetic;
+    if (!phonetic && data[0]?.phonetics?.length) {
+      for (const p of data[0].phonetics) {
+        if (p.text && p.text.trim()) { phonetic = p.text.trim(); break; }
+      }
+    }
     return phonetic;
   } catch (_) { return null; }
 }
@@ -2062,6 +2070,28 @@ function setLoopLine(active) {
 
 if (btnLoopLine) {
   btnLoopLine.addEventListener('click', () => setLoopLine(!loopLineActive));
+}
+
+// Botón loop en pantalla fullscreen — mismo comportamiento
+const btnLoopLineFs = document.getElementById('btn-loop-line-fs');
+if (btnLoopLineFs) {
+  btnLoopLineFs.addEventListener('click', () => setLoopLine(!loopLineActive));
+}
+
+// Sincronizar estado visual del botón fullscreen con el principal
+const origSetLoopLine = setLoopLine;
+function setLoopLine(active) {
+  loopLineActive = active;
+  [btnLoopLine, btnLoopLineFs].forEach(btn => {
+    if (!btn) return;
+    btn.classList.toggle('loop-active', active);
+    btn.title = active ? 'Loop ON — tap to stop' : 'Loop line';
+  });
+  if (!active) {
+    loopLineCount = 0;
+    if (loopCountBadge) loopCountBadge.textContent = '0';
+  }
+  showToast(active ? '🔁 Line loop ON — hold a line to repeat' : 'Loop OFF');
 }
 
 // Sobrescribir el handler de tap en línea para añadir loop
