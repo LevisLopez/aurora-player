@@ -1170,7 +1170,8 @@ async function enterCleanFullscreen() {
   if (Lyrics.enabled && !fullscreenLyricsFlow.children.length) renderInlineLyricsList();
   cleanFullscreen.hidden = false;
   requestAnimationFrame(() => cleanFullscreen.classList.add('active'));
-  showFullscreenControls(false); // siempre visibles al entrar
+  // Mostrar controles brevemente al entrar, luego se ocultan solos
+  showFullscreenControls(true);
   if (fullscreenEmpty) fullscreenEmpty.hidden = Lyrics.enabled && Lyrics.lines.length > 0;
   try {
     if (cleanFullscreen.requestFullscreen && document.fullscreenElement !== cleanFullscreen) {
@@ -1198,21 +1199,21 @@ function showFullscreenControls(autoHide = true) {
   cleanFullscreen.classList.add('controls-visible');
   fullscreenControls.classList.add('show');
   clearTimeout(fullscreenControlsTimer);
-  // No auto-hide — controles siempre visibles en fullscreen
+  if (autoHide) fullscreenControlsTimer = setTimeout(() => hideFullscreenControls(), 3000);
 }
 
 function hideFullscreenControls(force = false) {
   clearTimeout(fullscreenControlsTimer);
-  // En fullscreen los controles siempre quedan visibles salvo al entrar
-  if (!force) return;
   cleanFullscreen.classList.remove('controls-visible');
   fullscreenControls.classList.remove('show');
-  if (force) fullscreenControls.hidden = true;
+  setTimeout(() => {
+    if (!cleanFullscreen.classList.contains('controls-visible')) fullscreenControls.hidden = true;
+  }, 220);
 }
 
 function toggleFullscreenControls() {
-  // Tap en pantalla ya no oculta controles — siempre visibles
-  if (!cleanFullscreen.classList.contains('controls-visible')) showFullscreenControls(false);
+  if (cleanFullscreen.classList.contains('controls-visible')) hideFullscreenControls();
+  else showFullscreenControls();
 }
 
 async function toggleLyricsFullscreen() {
